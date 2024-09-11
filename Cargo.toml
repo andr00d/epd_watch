@@ -1,0 +1,13 @@
+[package]
+name = "epd_watch"
+version = "0.1.0"
+edition = "2021"
+
+[target.'cfg(target_os = "none")'.dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.3"
+ds323x = "0.5.1"
+embedded-hal = "1.0.0"
+nrf52840-hal = "0.18.0"
+panic-halt = "0.2.0"
+rtt-target = "0.5.0"
