@@ -1,12 +1,12 @@
-#[cfg(target_os = "none")]
-use rtt_target::rprintln;
-#[cfg(target_os = "linux")]
-macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
+// #[cfg(target_os = "none")]
+// use rtt_target::rprintln;
+// #[cfg(target_os = "linux")]
+// macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
 
 use crate::display::{Display, SIZE};
 
 // Each bit represents one pixel. 1 = white, 0 = black
-const letters: [u8; 135] =
+const FONT: [u8; 135] =
 [
     0b01010101, 0b01010101,            // <unknown character>
     0b11111111, 0b11111111,            // <space>
@@ -141,19 +141,19 @@ impl Display
 
         for ltr in text.bytes()
         {
-            let buff_index = (y as usize * (SIZE/8)) ;
+            let buff_index = y as usize * (SIZE/8);
             let char_width = self.get_width(ltr);
             let ltr_index = self.get_index(ltr);
             let mut ltr_curr_bit: u8 = 0;
             
             for h in 0..5
             {
-                let mut buff_offset = (h*s) as usize * (SIZE/8);
+                let buff_offset = (h*s) as usize * (SIZE/8);
 
                 for b in 0..char_width
                 {
                     let font_index = ltr_index + (ltr_curr_bit / 8) as usize;
-                    let bit_val = self.get_bit(&letters, font_index, ltr_curr_bit % 8);
+                    let bit_val = self.get_bit(&FONT, font_index, ltr_curr_bit % 8);
                     ltr_curr_bit += 1;
 
                     for n in 0..s

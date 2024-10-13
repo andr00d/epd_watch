@@ -1,5 +1,6 @@
 mod display;
 mod shape;
+mod font;
 
 use nrf52840_hal::spim::Spim;
 use nrf52840_hal::gpio::Pin;
@@ -10,7 +11,7 @@ use nrf52840_hal::gpio::{Input, Output, Floating, PushPull};
 const SIZE: usize = 200;
 const BUFFSIZE: usize = SIZE*((SIZE+7)/8);
 
-pub struct Disp_pins
+pub struct DispPins
 {
     pub power: Pin<Disconnected>,
     pub clk: Pin<Disconnected>,

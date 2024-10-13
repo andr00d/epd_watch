@@ -1,8 +1,8 @@
-[alias] 
-pc = 'run --target=x86_64-unknown-linux-gnu'
-
 [profile.dev]
 panic = "abort"
+
+[profile.release]
+lto = true
 
 [build]
 target = "thumbv7em-none-eabihf"

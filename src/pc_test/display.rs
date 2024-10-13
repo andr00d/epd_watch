@@ -50,7 +50,7 @@ impl Display
 
     }
 
-    pub fn update(&self)
+    pub fn update(&mut self)
     {
         // uses the teletext G1 block mosaics to generate the display
         // https://en.wikipedia.org/wiki/Box-drawing_characters#BBC_and_Acorn
@@ -76,12 +76,13 @@ impl Display
         }
 
         println!("{}", output);
+        self.buffer_curr.fill(0xff);
     }
     
     ////////////////////////////////////
     // used a lot by other display functions.
 
-    fn set_bit(&mut self, index: usize, bit_index: u8, value: bool) 
+    pub(super) fn set_bit(&mut self, index: usize, bit_index: u8, value: bool) 
     {
         let clr_mask = 0xff ^ (0x80 >> bit_index);
         let set_mask = ((value as u8) << 7) >> bit_index;
@@ -90,7 +91,7 @@ impl Display
         self.buffer_curr[index] |= set_mask;
     }
 
-    fn get_bit(&mut self, arr: &[u8], index: usize, bit_index: u8) -> bool
+    pub(super) fn get_bit(&mut self, arr: &[u8], index: usize, bit_index: u8) -> bool
     {
         let mask = 0x80 >> bit_index;
         return (arr[index] & mask) > 0;

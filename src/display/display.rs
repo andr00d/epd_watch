@@ -1,17 +1,15 @@
-use nrf52840_hal as hal;
 use nrf52840_hal::gpio::Level;
 use nrf52840_hal::spim::Spim;
-
 use embedded_hal::digital::{InputPin, OutputPin, PinState};
 use embedded_hal::spi::SpiBus;
 use rtt_target::rprintln;
 
-use crate::display::{Display, BUFFSIZE, SIZE};
-use crate::display::Disp_pins;
+use crate::display::{Display, BUFFSIZE};
+use crate::display::DispPins;
 
 impl Display 
 {
-    pub fn new(spim: nrf52840_hal::pac::SPIM2, pins: Disp_pins) -> Display
+    pub fn new(spim: nrf52840_hal::pac::SPIM2, pins: DispPins) -> Display
     {
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
         let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
@@ -55,7 +53,7 @@ impl Display
 
     pub fn init(&mut self)
     {
-        self.power.set_state(PinState::High);
+        _ = self.power.set_state(PinState::High);
         cortex_m::asm::delay(660_000);
         
         // Module reset (At least 10ms delay between)
@@ -67,7 +65,8 @@ impl Display
         cortex_m::asm::delay(6_600_000);
 
         // startup sequence
-        self.send_cmd(0x00); // panel setting
+        // raw hex commands are undocumented but needed.
+        self.send_cmd(Self::PANEL_SETTING); // panel setting
         self.send_data(&[0xdf]);
         self.send_data(&[0x0e]);
         self.send_cmd(0x4d);
@@ -80,15 +79,15 @@ impl Display
         self.send_data(&[0x11]);
         self.send_cmd(0xf3);
         self.send_data(&[0x0a]);
-        self.send_cmd(0x61);
+        self.send_cmd(Self::RESOLUTION_SETTING);
         self.send_data(&[0xc8]);
         self.send_data(&[0x00]);
         self.send_data(&[0xc8]);
-        self.send_cmd(0x60);
+        self.send_cmd(Self::TCON_SETTING);
         self.send_data(&[0x00]);
-        self.send_cmd(0x50);
+        self.send_cmd(Self::VCOM_DATA_INTERVAL);
         self.send_data(&[0x97]);
-        self.send_cmd(0xe3);
+        self.send_cmd(Self::POWER_SAVING);
         self.send_data(&[0x00]);
 
         // if it hangs here, good luck debugging!
@@ -113,28 +112,30 @@ impl Display
     {
         self.send_cmd(Self::DATA_TRANSMISSION_1);
         
-        self.cs.set_state(PinState::Low);
-        self.dc.set_state(PinState::High);
+        _ = self.cs.set_state(PinState::Low);
+        _ = self.dc.set_state(PinState::High);
         _ = SpiBus::write(&mut self.spi, &self.buffer_curr);
-        self.cs.set_state(PinState::High);
+        _ = self.cs.set_state(PinState::High);
 
         self.send_cmd(Self::DATA_TRANSMISSION_2);
         
-        self.cs.set_state(PinState::Low);
-        self.dc.set_state(PinState::High);
+        _ = self.cs.set_state(PinState::Low);
+        _ = self.dc.set_state(PinState::High);
         _ = SpiBus::write(&mut self.spi, &self.buffer_old);
-        self.cs.set_state(PinState::High);
+        _ = self.cs.set_state(PinState::High);
 
         self.send_cmd(Self::DISPLAY_REFRESH);
-        (self.buffer_curr, self.buffer_old) = (self.buffer_old, self.buffer_curr);
         cortex_m::asm::delay(100_000);
         self.wait_busy();
+
+        (self.buffer_curr, self.buffer_old) = (self.buffer_old, self.buffer_curr);
+        self.buffer_curr.fill(0xff);
     }
 
     ////////////////////////////////////
     // used a lot by other display functions.
 
-    fn set_bit(&mut self, index: usize, bit_index: u8, value: bool) 
+    pub(super) fn set_bit(&mut self, index: usize, bit_index: u8, value: bool) 
     {
         let clr_mask = 0xff ^ (0x80 >> bit_index);
         let set_mask = ((value as u8) << 7) >> bit_index;
@@ -143,7 +144,7 @@ impl Display
         self.buffer_curr[index] |= set_mask;
     }
 
-    fn get_bit(&mut self, arr: &[u8], index: usize, bit_index: u8) -> bool
+    pub(super) fn get_bit(&mut self, arr: &[u8], index: usize, bit_index: u8) -> bool
     {
         let mask = 0x80 >> bit_index;
         return (arr[index] & mask) > 0;
@@ -181,7 +182,7 @@ impl Display
     ////////////////////////////////////
     
     // GDEW0154M09 commands
-    // const PANEL_SETTING: u8 =               0x00;
+    const PANEL_SETTING: u8 =               0x00;
     // const POWER_SETTING: u8 =               0x01;
     const POWER_OFF: u8 =                   0x02;
     // const POWER_OFF_SEQ_SETTING: u8 =       0x03;
@@ -194,11 +195,11 @@ impl Display
     const DISPLAY_REFRESH: u8 =             0x12;
     const DATA_TRANSMISSION_2: u8 =         0x13;
     // const AUTO_SEQUENCE: u8 =               0x17;
-    const LUT_VCOM: u8 =                    0x20;
-    const LUT_WW: u8 =                      0x21;
-    const LUT_BW: u8 =                      0x22;
-    const LUT_WB: u8 =                      0x23;
-    const LUT_BB: u8 =                      0x24;
+    // const LUT_VCOM: u8 =                    0x20;
+    // const LUT_WW: u8 =                      0x21;
+    // const LUT_BW: u8 =                      0x22;
+    // const LUT_WB: u8 =                      0x23;
+    // const LUT_BB: u8 =                      0x24;
     // const LUT_OPTION: u8 =                  0x2A;
     // const PLL_CONTROL: u8 =                 0x30;
     // const TEMP_SENSOR_CALLIBRATION: u8 =    0x40;
@@ -206,10 +207,10 @@ impl Display
     // const TEMP_SENSOR_WRITE: u8 =           0x42;
     // const TEMP_SENSOR_READ: u8 =            0x43;
     // const PANEL_BREAK_CHECK: u8 =           0x44;
-    // const VCOM_DATA_INTERVAL: u8 =          0x50;
+    const VCOM_DATA_INTERVAL: u8 =          0x50;
     // const LOWER_POWER_DETECT: u8 =          0x51;
-    // const TCON_SETTING: u8 =                0x60;
-    // const RESOLUTION_SETTING: u8 =          0x61;
+    const TCON_SETTING: u8 =                0x60;
+    const RESOLUTION_SETTING: u8 =          0x61;
     // const GATE_SOURCE_START: u8 =           0x65;
     // const REVISION: u8 =                    0x70;
     // const GET_STATUS: u8 =                  0x71;
@@ -223,7 +224,7 @@ impl Display
     // const ACTIVE_PROGRAMMING: u8 =          0xA1;
     // const READ_OTP_DATA: u8 =               0xA2;
     // const CASCADE_SETTING: u8 =             0xE0;
-    // const POWER_SAVING: u8 =                0xE3;
+    const POWER_SAVING: u8 =                0xE3;
     // const LVD_VOLTAGE_SELECT: u8 =          0xE4;
     // const FORCE_TEMP: u8 =                  0xE5;
 }

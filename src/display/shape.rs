@@ -3,7 +3,7 @@ use rtt_target::rprintln;
 #[cfg(target_os = "linux")]
 macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
 
-use crate::display::{Display, BUFFSIZE, SIZE};
+use crate::display::{Display, SIZE};
 
 impl Display 
 {

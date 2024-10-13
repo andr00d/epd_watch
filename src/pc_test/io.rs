@@ -29,8 +29,8 @@ impl Io
         };
     }
 
-    pub fn check_input(&self)
+    pub fn wait_for_input(&self)
     {
-
+        // loop{}
     }    
 }

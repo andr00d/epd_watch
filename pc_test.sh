@@ -1,0 +1,1 @@
+rustc src/pc_test/pc_test.rs --out-dir src/pc_test/ && ./src/pc_test/pc_test
