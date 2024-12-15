@@ -1,7 +1,7 @@
-// #[cfg(target_os = "none")]
-// use rtt_target::rprintln;
-// #[cfg(target_os = "linux")]
-// macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
+#[cfg(target_os = "none")]
+use rtt_target::rprintln;
+#[cfg(target_os = "linux")]
+macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
 
 use crate::display::{Display, SIZE};
 
@@ -137,7 +137,8 @@ impl Display
         width = width * s;
 
         if usize::from(width as u16) > SIZE {return;}
-        if usize::from(x + width) > SIZE || usize::from(y + s) > SIZE {return;}
+        if usize::from(x as u16 + width as u16) > SIZE || 
+           usize::from(y as u16 + s as u16) > SIZE {return;}
 
         for ltr in text.bytes()
         {

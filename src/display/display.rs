@@ -156,7 +156,9 @@ impl Display
     {
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::Low);
-        _ = SpiBus::write(&mut self.spi, &[cmd]);
+        cortex_m::interrupt::free(|cs| {
+            _ = SpiBus::write(&mut self.spi, &[cmd]);
+        });
         _ = self.cs.set_state(PinState::High);
     }
 
@@ -164,7 +166,9 @@ impl Display
     {
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::High);
+        cortex_m::interrupt::free(|cs| {
         _ = SpiBus::write(&mut self.spi, data);
+        });
         _ = self.cs.set_state(PinState::High);
     }
 
@@ -174,7 +178,7 @@ impl Display
         // TODO: switch this to sleep
         while self.busy.is_low().unwrap()
         {
-            cortex_m::asm::delay(1_000_000);
+            cortex_m::asm::delay(10_000_000);
             rprintln!("wait loop");
         }
     }
