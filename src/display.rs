@@ -1,11 +1,11 @@
 mod display;
 mod shape;
-mod font;
+pub mod font;
 
-use nrf52840_hal::spim::Spim;
-use nrf52840_hal::gpio::Pin;
-use nrf52840_hal::gpio::Disconnected;
-use nrf52840_hal::gpio::{Input, Output, Floating, PushPull};
+use nrf52832_hal::spim::Spim;
+use nrf52832_hal::gpio::Pin;
+use nrf52832_hal::gpio::Disconnected;
+use nrf52832_hal::gpio::{Input, Output, Floating, PushPull};
 
 
 const SIZE: usize = 200;
@@ -28,7 +28,7 @@ pub struct Display
     buffer_curr: [u8; BUFFSIZE],
     buffer_old: [u8; BUFFSIZE],
     power: Pin<Output<PushPull>>,
-    spi: Spim<nrf52840_hal::pac::SPIM2>,
+    spi: Spim<nrf52832_hal::pac::SPIM2>,
     busy: Pin<Input<Floating>>,
     res: Pin<Output<PushPull>>,
     cs: Pin<Output<PushPull>>,

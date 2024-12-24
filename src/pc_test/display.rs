@@ -2,7 +2,7 @@
 mod shape;
 
 #[path = "../display/font.rs"]
-mod font;
+pub mod font;
 
 pub const SIZE: usize = 200;
 pub const BUFFSIZE: usize = SIZE*((SIZE+7)/8);
@@ -28,7 +28,6 @@ impl Display
     {
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
         let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
-        let width = (SIZE+7)/8;
         
         return Display{
             buffer_curr: buffer_curr,
@@ -39,9 +38,7 @@ impl Display
     {
         print!("{esc}c", esc = 27 as char);
         println!("###########################################################################");
-        println!("because of font weirdness, screen might be a bit stretched");
-        println!("As long as each character is the same width, it should be good.");
-        println!("(on some terminals you can set cell spacing, a spacing of 1.5 should work.)");
+        println!("simple display debugger");
         println!("###########################################################################");
     }
 
@@ -52,25 +49,15 @@ impl Display
 
     pub fn update(&mut self)
     {
-        // uses the teletext G1 block mosaics to generate the display
-        // https://en.wikipedia.org/wiki/Box-drawing_characters#BBC_and_Acorn
+        // uses the braille block characters to generate the screen
+        // https://en.wikipedia.org/wiki/Braille_Patterns#Block
         let mut output = "".to_string();
-        let pixels = [
-            ' ','🬞','🬏','🬭','🬇','🬦','🬖','🬵',
-            '🬃','🬢','🬓','🬱','🬋','🬩','🬚','🬹',
-            '🬁','🬠','🬑','🬯','🬉','▐','🬘','🬷',
-            '🬅','🬤','🬔','🬳','🬍','🬫','🬜','🬻',
-            '🬀','🬟','🬐','🬮','🬈','🬧','🬗','🬶',
-            '🬄','🬣','▌','🬲','🬌','🬪','🬛','🬺',
-            '🬂','🬡','🬒','🬰','🬊','🬨','🬙','🬸',
-            '🬆','🬥','🬕','🬴','🬎','🬬','🬝','█',
-        ];
-        
-        for y in (0..SIZE).step_by(3)
+
+        for y in (0..SIZE).step_by(4)
         {
             for x in (0..SIZE).step_by(2)
             {
-                output.push(pixels[self.gen_character(&self.buffer_curr, x, y)]);
+                output.push(self.gen_character(&self.buffer_curr, x, y));
             }
             output.push('\n');
         }
@@ -89,6 +76,7 @@ impl Display
     
         self.buffer_curr[index] &= clr_mask;
         self.buffer_curr[index] |= set_mask;
+        // println!("{:8b} - {:8b} => {:x}", clr_mask, set_mask, self.buffer_curr[index]);
     }
 
     pub(super) fn get_bit(&mut self, arr: &[u8], index: usize, bit_index: u8) -> bool
@@ -99,24 +87,25 @@ impl Display
 
     ////////////////////////////////////
 
-    fn gen_character(&self, buff: &[u8; BUFFSIZE], x:usize, y:usize) -> usize
+    fn gen_character(&self, buff: &[u8; BUFFSIZE], x:usize, y:usize) -> char
     {
         let mut output: u8 = 0x0;
         let width : usize = (SIZE+7)/8;
-        for y_off in 0..3
-        {
-            for x_off in 0..2
-            {
-                if (y+y_off >= SIZE) || (x+x_off >= SIZE) {continue;}
-                  
-                let out_mask = 0x20 >> (y_off*2 + x_off);
-                let in_byte = buff[(y+y_off)*width + ((x+x_off) / 8)];
-                let byte_mask = 0x80 >> ((x+x_off) % 8);
 
-                if (in_byte & byte_mask) != 0 {output |= 0xFF & out_mask;}
-            };
-        }
+        let curr_byte = y*width + (x/8);
+        let mask = 0x80 >> (x as u8)%8;
+        output |= ((buff[curr_byte] & mask) > 0) as u8;
+        output |= (((buff[curr_byte+width] & mask) > 0) as u8) << 1;
+        output |= (((buff[curr_byte+(width*2)] & mask) > 0) as u8) << 2;
+        output |= (((buff[curr_byte+(width*3)] & mask) > 0) as u8) << 6;
 
-        return output as usize;
+        let curr_byte = y*width + ((x+1)/8);
+        let mask = 0x80 >> ((x+1) as u8)%8;
+        output |= (((buff[curr_byte] & mask) > 0) as u8) << 3;
+        output |= (((buff[curr_byte+width] & mask) > 0) as u8) << 4;
+        output |= (((buff[curr_byte+(width*2)] & mask) > 0) as u8) << 5;
+        output |= (((buff[curr_byte+(width*3)] & mask) > 0) as u8) << 7;
+
+        return char::from_u32((0x2800 + output as u32) as u32).unwrap();
     }
 }

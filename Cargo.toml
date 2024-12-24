@@ -11,8 +11,8 @@ ds323x = "0.5.1"
 embedded-hal = "1.0.0"
 systick-monotonic = "1.0.0"
 rtt-target = "0.5.0"
-nrf52840-hal = {version = "0.18.0", features = ["rt"]}
-nrf52840-pac = "0.12"
+nrf52832-hal = {version = "0.18.0", features = ["rt"]}
+nrf52832-pac = "0.12"
 circular-buffer = { version = "0.1", default-features = false }
 heapless = "0.8.0"
 panic-halt = "0.2.0"

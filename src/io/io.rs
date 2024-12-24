@@ -1,6 +1,6 @@
-use nrf52840_hal as hal;
-use nrf52840_pac::interrupt;
-use nrf52840_hal::gpiote::Gpiote;
+use nrf52832_hal as hal;
+use nrf52832_pac::interrupt;
+use nrf52832_hal::gpiote::Gpiote;
 use embedded_hal::digital::InputPin;
 use ds323x::{DateTimeAccess, Ds323x, Datelike, NaiveDateTime, NaiveDate, Rtcc};
 use ds323x::{DayAlarm2, WeekdayAlarm1, Hours, Alarm1Matching, Alarm2Matching};
@@ -44,7 +44,7 @@ fn GPIOTE()
     });
 }
 
-fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52840_hal::pac::TWIM0>>, DS3231>) -> Event
+fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52832_hal::pac::TWIM0>>, DS3231>) -> Event
 {
     match rtc.has_alarm1_matched()
     {
@@ -79,7 +79,7 @@ fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52840_hal::pac::TWIM0>>,
 
 impl Io
 {
-    pub fn new(twi: nrf52840_hal::pac::TWIM0, gpiote: Gpiote, pins: IoPins) -> Io
+    pub fn new(twi: nrf52832_hal::pac::TWIM0, gpiote: Gpiote, pins: IoPins) -> Io
     {
         let mut buffer = CircularBuffer::<5, Event>::new();
         let mut twim = hal::Twim::new(
@@ -187,15 +187,24 @@ impl Io
         return out;
     }
 
+    pub fn get_dow_str(&mut self) -> String<32>
+    {
+        let t = self.get_datetime();
+        let dow = self::DAYS[t.weekday().num_days_from_monday() as usize];
+
+        let mut out = String::<32>::new();
+        let _ = write!(out, "{}", dow);
+        return out;
+    }
+
     pub fn get_date_str(&mut self) -> String<32>
     {
         let t = self.get_datetime();
         let m = self::MONTHS[t.month0() as usize];
-        let dow = self::DAYS[t.weekday().num_days_from_monday() as usize];
         let d = t.day();
 
         let mut out = String::<32>::new();
-        let _ = write!(out, "{} {} {}", dow, d, m);
+        let _ = write!(out, "{} {}", d, m);
         return out;
     }
 

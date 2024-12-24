@@ -3,16 +3,17 @@
 
 use cortex_m_rt::entry;
 use hal::pac;
-use nrf52840_hal as hal;
+use nrf52832_hal as hal;
 // use panic_halt as _;
 use rtt_target::{rtt_init_print, rprintln};
-use nrf52840_hal::gpiote::Gpiote;
+use nrf52832_hal::gpiote::Gpiote;
 
 use crate::display::DispPins;
 use crate::io::IoPins;
 use crate::display::Display;
 use crate::io::{Io, Event};
 
+mod sharedData;
 mod display;
 mod io;
 mod pages;

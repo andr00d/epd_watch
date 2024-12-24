@@ -1,5 +1,5 @@
-use nrf52840_hal::gpio::Level;
-use nrf52840_hal::spim::Spim;
+use nrf52832_hal::gpio::Level;
+use nrf52832_hal::spim::Spim;
 use embedded_hal::digital::{InputPin, OutputPin, PinState};
 use embedded_hal::spi::SpiBus;
 use rtt_target::rprintln;
@@ -9,7 +9,7 @@ use crate::display::DispPins;
 
 impl Display 
 {
-    pub fn new(spim: nrf52840_hal::pac::SPIM2, pins: DispPins) -> Display
+    pub fn new(spim: nrf52832_hal::pac::SPIM2, pins: DispPins) -> Display
     {
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
         let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
@@ -24,7 +24,7 @@ impl Display
         let mosi = pins.mosi.into_push_pull_output(Level::Low);
         let miso = pins.miso.into_floating_input();
 
-        let pins = nrf52840_hal::spim::Pins 
+        let pins = nrf52832_hal::spim::Pins 
         {
             sck: Some(clk),
             miso: Some(miso),
@@ -34,8 +34,8 @@ impl Display
         let spi = Spim::new(
             spim,
             pins,
-            nrf52840_hal::spim::Frequency::K500,
-            nrf52840_hal::spim::MODE_0,
+            nrf52832_hal::spim::Frequency::K500,
+            nrf52832_hal::spim::MODE_0,
             0,
         );
         

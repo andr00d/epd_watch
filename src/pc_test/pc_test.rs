@@ -1,13 +1,13 @@
-// #[path = "../src/pc_test/display.rs"]
+#[path = "../sharedData.rs"]
+mod sharedData;
 mod display;
-
-// #[path = "../src/pc_test/io.rs"]
 mod io;
-
-// mod pages;
+mod pages;
 
 use crate::display::Display;
-use crate::io::Io;
+use crate::io::{Io, Event};
+use crate::pages::Pages;
+use crate::sharedData::SharedData;
 
 
 fn connect_parts() -> (Display, Io)
@@ -20,35 +20,19 @@ fn connect_parts() -> (Display, Io)
 
 fn main()
 {
-    #[cfg(target_os = "none")]
-    rtt_init_print!();
+    let (mut display, mut io) = connect_parts();
+    let mut shared = SharedData::new(&mut display, &mut io);
+    let mut pages = Pages::new();
 
-    let (mut display, io) = connect_parts();
-    
-    // let pages = Pages::new();
-
-    // display.square(10, 10, 20, 20);
+    pages.update_page(Event::Minute, &mut shared);
     display.update();
-
-    println!("finished booting");
-
-    let mut text_flip = false;
 
     loop 
     {
-        io.wait_for_input();
+        let ev = io.wait_for_input();
+        if ev == Event::None {continue;}
 
-        if text_flip
-        {
-            display.text("test", 64, 10, 5);
-        }
-        else
-        {
-            display.text("test", 64, 50, 5);
-        }
-
+        // pages.update_page(ev);
         display.update();
-        text_flip = !text_flip;
-        // pages.update();
     }
 }

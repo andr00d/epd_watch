@@ -5,6 +5,15 @@ macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg
 
 use crate::display::{Display, SIZE};
 
+#[derive(PartialEq)]
+pub enum Anchor
+{
+    Left,
+    Center,
+    Right
+}
+
+
 // Each bit represents one pixel. 1 = white, 0 = black
 const FONT: [u8; 135] =
 [
@@ -83,9 +92,10 @@ const FONT: [u8; 135] =
 
 impl Display 
 {
-    fn get_width(&self, item: u8) -> u8
+    fn get_width(&self, mut item: u8) -> u8
     {
         let mut width: u8 = 3;
+        if item >= 'a' as u8 && item <= 'z' as u8 { item -= 32; }
 
         if      item == 'I' as u8 || item == ':' as u8 || item == '\'' as u8 || item == '1' as u8 {width = 1;}
         else if item == 'J' as u8 || item == '`' as u8 {width = 2;}
@@ -94,17 +104,24 @@ impl Display
         return width;
     }
 
-    pub fn get_text_width(&self, text: &str) -> u8
+    pub fn get_text_width(&self, text: &str, size: u8) -> u16
     {
-        let mut total: u8 = 0;
+        let mut total: u16 = 0;
+        let mut padding = (size as u16)/2;
+        if padding == 0 {padding = 1;}
 
         for i in 0..text.len()
         {
-            total += self.get_width(text.as_bytes()[i as usize]);
-            total += 1; //spacing
+            let letter = text.as_bytes()[i as usize];
+            if self.get_index(letter) == 0 {total += 4;}
+            else
+            {
+                total += self.get_width(text.as_bytes()[i as usize]) as u16 * size as u16;
+                total += padding;
+            }
         }
 
-        total -= 1; // remove with extra spacing
+        total -= padding; // remove extra spacing
         return total;
     }
 
@@ -130,15 +147,31 @@ impl Display
     ////////////////////////////////////
     
     // TODO: translate to upper case
-    pub fn text(&mut self, text: &str, x: u8, y: u8, s: u8)
+    pub fn text(&mut self, text: &str, mut x: u8, y: u8, s: u8, anchor: Anchor)
     {
-        let mut width = self.get_text_width(text);
+        let mut width = self.get_text_width(text, s);
         let mut ltr_offset = 0;
-        width = width * s;
 
-        if usize::from(width as u16) > SIZE {return;}
-        if usize::from(x as u16 + width as u16) > SIZE || 
-           usize::from(y as u16 + s as u16) > SIZE {return;}
+        if anchor != Anchor::Left
+        {
+            let mut offset = width;
+            if anchor == Anchor::Center {offset = offset / 2;}
+
+            if offset > x as u16
+            {
+                return;
+            }
+
+            x -= offset as u8;
+        }
+
+        if usize::from(width) > SIZE ||
+           usize::from(x as u16 + width as u16) > SIZE || 
+           usize::from(y as u16 + s as u16) > SIZE 
+        {
+            rprintln!("text too large! ({})", text);
+            return;
+        }
 
         for ltr in text.bytes()
         {
@@ -147,6 +180,7 @@ impl Display
             let ltr_index = self.get_index(ltr);
             let mut ltr_curr_bit: u8 = 0;
             
+
             for h in 0..5
             {
                 let buff_offset = (h*s) as usize * (SIZE/8);
@@ -172,10 +206,10 @@ impl Display
             ltr_offset += char_width*s + padding;
         }
 
-        // // fill in bars between layers
+        // fill in bars between layers
         for h in 0..5
         {
-            let buff_width = (((x%8) + width + 7) / 8) as usize; 
+            let buff_width = (((x%8) as u16 + width + 7) / 8) as usize; 
             let mut ref_start = (y as usize * (SIZE/8)) + (x / 8) as usize;
             ref_start += (s as usize) * h * (SIZE/8);
 
