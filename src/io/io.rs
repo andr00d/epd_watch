@@ -2,7 +2,8 @@ use nrf52832_hal as hal;
 use nrf52832_pac::interrupt;
 use nrf52832_hal::gpiote::Gpiote;
 use embedded_hal::digital::InputPin;
-use ds323x::{DateTimeAccess, Ds323x, Datelike, NaiveDateTime, NaiveDate, Rtcc};
+use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
+use ds323x::{DateTimeAccess, Ds323x, Datelike};
 use ds323x::{DayAlarm2, WeekdayAlarm1, Hours, Alarm1Matching, Alarm2Matching};
 use ds323x::interface::I2cInterface;
 use ds323x::ic::DS3231;
@@ -72,7 +73,7 @@ fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52832_hal::pac::TWIM0>>,
         Err(x) => {rprintln!("Error communicating with rtc: {:?}", x);}
     }
 
-    return Event::None;
+    return Event::NoEvent;
 }
 
 ////////////////////////////////////////////
@@ -142,14 +143,14 @@ impl Io
             }
         });
 
-        if ev.is_none() {return Event::None;}
+        if ev.is_none() {return Event::NoEvent;}
         // if ev.unwrap() == Event::Rtc {ev = Some(self.check_rtc());}
         return ev.unwrap();
     }    
 
     ////////////////////////////////////////////
 
-    fn get_datetime(&mut self) -> NaiveDateTime
+    pub fn get_datetime(&mut self) -> NaiveDateTime
     {
         let mut dt = NaiveDateTime::from_timestamp(0, 0);
         free(|cs| {
@@ -161,15 +162,19 @@ impl Io
         return dt;
     }
 
-    pub fn set_datetime(&mut self, dy: i32, dm: u32, dd: u32, h: u32, m: u32) -> bool
+    pub fn set_datetime(&mut self, dy: u16, dm: u8, dd: u8, h: u8, m: u8) -> bool
     {
-        let datetime = NaiveDate::from_ymd(dy, dm, dd).and_hms(h, m, 0);
+        let date_opt = NaiveDate::from_ymd_opt(dy as i32, dm as u32, dd as u32);
+        let time_opt = NaiveTime::from_hms_opt(h as u32, m as u32, 0);
+        if date_opt.is_none() || time_opt.is_none() {return false;} 
+
+        let dt = NaiveDateTime::new(date_opt.unwrap(), time_opt.unwrap());
         let mut result = false;
 
         free(|cs| {
             if let Some(ref mut int_data) = get_intdata!(cs) 
             {
-                result = int_data.rtc.set_datetime(&datetime).is_ok();
+                result = int_data.rtc.set_datetime(&dt).is_ok();
             }
         });
 
@@ -208,6 +213,8 @@ impl Io
         return out;
     }
 
+    ////////////////////////////////////////////
+
     pub fn set_alarm(&mut self, d: u8, h: u8, m: u8)
     {
         let alarm = WeekdayAlarm1
@@ -235,5 +242,12 @@ impl Io
                 let _ = int_data.rtc.disable_alarm1_interrupts();
             }
         });
+    }
+
+    ////////////////////////////////////////////
+
+    pub fn play_tone(&mut self)
+    {
+        // TODO: play 1 second tone signal
     }
 }

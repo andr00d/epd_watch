@@ -1,5 +1,10 @@
+#[path = "../../src/pages/pages.rs"]
 pub mod pages;
+
+#[path = "../../src/pages/state.rs"]
 pub mod state;
+
+#[path = "../../src/pages/core_pages.rs"]
 mod core_pages;
 
 use crate::shared_data::SharedData;

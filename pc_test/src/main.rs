@@ -1,5 +1,7 @@
-#[path = "../sharedData.rs"]
-mod sharedData;
+macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?)};}
+
+#[path = "../../src/shared_data.rs"]
+mod shared_data;
 mod display;
 mod io;
 mod pages;
@@ -7,8 +9,7 @@ mod pages;
 use crate::display::Display;
 use crate::io::{Io, Event};
 use crate::pages::Pages;
-use crate::sharedData::SharedData;
-
+use crate::shared_data::SharedData;
 
 fn connect_parts() -> (Display, Io)
 {
@@ -25,14 +26,14 @@ fn main()
     let mut pages = Pages::new();
 
     pages.update_page(Event::Minute, &mut shared);
-    display.update();
+    shared.display.update();
 
     loop 
     {
-        let ev = io.wait_for_input();
-        if ev == Event::None {continue;}
+        let ev = shared.io.wait_for_input();
+        if ev == Event::NoEvent {continue;}
 
-        // pages.update_page(ev);
-        display.update();
+        pages.update_page(ev, &mut shared);
+        shared.display.update();
     }
 }

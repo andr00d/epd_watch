@@ -1,7 +1,6 @@
 #[cfg(target_os = "none")]
 use rtt_target::rprintln;
-#[cfg(target_os = "linux")]
-macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
+// #[cfg(target_os = "linux")]
 
 use crate::display::{Display, SIZE};
 

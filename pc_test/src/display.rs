@@ -1,22 +1,15 @@
-#[path = "../display/shape.rs"]
+#[path = "../../src/display/shape.rs"]
 mod shape;
 
-#[path = "../display/font.rs"]
+#[path = "../../src/display/font.rs"]
 pub mod font;
 
 pub const SIZE: usize = 200;
 pub const BUFFSIZE: usize = SIZE*((SIZE+7)/8);
 
-pub enum Buffer 
-{
-    A,
-    B,
-}
-
 pub struct Display 
 {
     buffer_curr: [u8; BUFFSIZE],
-    buffer_old: [u8; BUFFSIZE],
 }
 
 ///////////////////////////////////////
@@ -27,16 +20,14 @@ impl Display
     pub fn new() -> Display
     {
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
-        let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
         
         return Display{
             buffer_curr: buffer_curr,
-            buffer_old: buffer_old,
         };
     }    
     pub fn init(&mut self)
     {
-        print!("{esc}c", esc = 27 as char);
+        // print!("{esc}c", esc = 27 as char);
         println!("###########################################################################");
         println!("simple display debugger");
         println!("###########################################################################");

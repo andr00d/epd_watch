@@ -9,11 +9,13 @@ use rtt_target::{rtt_init_print, rprintln};
 use nrf52832_hal::gpiote::Gpiote;
 
 use crate::display::DispPins;
-use crate::io::IoPins;
+use crate::io::{Io, IoPins, Event};
+use crate::shared_data::SharedData;
 use crate::display::Display;
-use crate::io::{Io, Event};
+use crate::pages::Pages;
 
-mod sharedData;
+
+mod shared_data;
 mod display;
 mod io;
 mod pages;
@@ -52,7 +54,7 @@ fn connect_parts() -> (Display, Io)
     gpiote.port().input_pin(&io_pins.btn_dwn).low();
     gpiote.port().enable_interrupt();
 
-    let mut display = Display::new(p.SPIM2, disp_pins);
+    let display = Display::new(p.SPIM2, disp_pins);
     let io = Io::new(p.TWIM0, gpiote, io_pins);
     return (display, io);
 }
@@ -74,7 +76,7 @@ fn connect_display() -> Display
         dc: p0.p0_09.degrade(),
     };
 
-    let mut display = Display::new(p.SPIM2, disp_pins);
+    let display = Display::new(p.SPIM2, disp_pins);
     return display;
 }
 
@@ -110,24 +112,30 @@ fn main() -> !
 {
     rtt_init_print!();
 
-    // let (mut display, io) = connect_parts();
-    // let mut display = connect_display();
-    let mut io = connect_io();
+    let (mut display, mut io) = connect_parts();
+    let mut shared = SharedData::new(&mut display, &mut io);
+    let mut pages = Pages::new();
 
-    let mut text_flip = false;
+    // let mut display = connect_display();
+    // let mut io = connect_io();
 
     loop 
     {
+        let ev = shared.io.wait_for_input();
+        if ev == Event::NoEvent {continue;}
+
+        pages.update_page(ev, &mut shared);
+        shared.display.update();
 
         // let ev = io.wait_for_input();
-        // if ev == Event::None {continue;}
+        // if ev == Event::NoEvent {continue;}
 
         // if ev == Event::BtnUp {display.text("up", 64, 50, 5);}
         // if ev == Event::BtnMid {display.text("mid", 64, 50, 5);}
         // if ev == Event::BtnDown {display.text("dwn", 64, 50, 5);}
 
-        cortex_m::asm::delay(6_400_000);
-        rprintln!("testing");
+        // cortex_m::asm::delay(6_400_000);
+        // rprintln!("testing");
 
         // if ev == Event::BtnUp || ev == Event::BtnMid || ev == Event::BtnDown 
         // {

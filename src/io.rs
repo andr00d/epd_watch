@@ -15,7 +15,7 @@ use circular_buffer::CircularBuffer;
 #[derive(Debug)]
 pub enum Event
 {
-    None,
+    NoEvent,
     Minute,
     Alarm,
     BtnUp,

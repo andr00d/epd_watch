@@ -1,8 +1,5 @@
 #[cfg(target_os = "none")]
 use rtt_target::rprintln;
-#[cfg(target_os = "linux")]
-macro_rules! rprintln {($fmt:expr $(, $($arg:tt)*)?) => {println!($fmt, $($($arg)*)?);};}
-
 use crate::display::{Display, SIZE};
 
 #[derive(PartialEq)]
@@ -149,7 +146,7 @@ impl Display
     // TODO: translate to upper case
     pub fn text(&mut self, text: &str, mut x: u8, y: u8, s: u8, anchor: Anchor)
     {
-        let mut width = self.get_text_width(text, s);
+        let width = self.get_text_width(text, s);
         let mut ltr_offset = 0;
 
         if anchor != Anchor::Left

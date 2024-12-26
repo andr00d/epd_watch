@@ -1,0 +1,9 @@
+[package]
+name = "epd_watch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4.35", default-features = false }
+ds323x = "0.5.1"
+
