@@ -148,6 +148,22 @@ impl Io
         return ev.unwrap();
     }    
 
+    pub fn get_input_waitms(&mut self, delay_ms: u32) -> Event
+    {
+         //TODO: less powerhungry/better wait
+        cortex_m::asm::delay(64_000 * delay_ms);
+        let mut ev = None; 
+        
+        cortex_m::interrupt::free(|cs| {
+            if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
+            {
+                ev = int_data.buffer.pop_front();
+            }
+        });
+        
+        return ev.unwrap_or(Event::NoEvent);
+    }
+
     ////////////////////////////////////////////
 
     pub fn get_datetime(&mut self) -> NaiveDateTime

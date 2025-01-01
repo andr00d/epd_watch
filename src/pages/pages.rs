@@ -35,7 +35,7 @@ impl Pages
             MenuTime => { match ev {
                 Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
                 Minute  => {self.sm_step(data, MenuTime,        Self::menu_time,        None);},
-                BtnUp   => {self.sm_step(data, MenuStopwatch,   Self::menu_stopwatch,   None);},
+                BtnUp   => {self.sm_step(data, MenuSnake,       Self::menu_snake,       None);},
                 BtnDown => {self.sm_step(data, MenuSettings,    Self::menu_settings,    None);},
                 _ => (),
             } },
@@ -60,13 +60,21 @@ impl Pages
                 Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
                 BtnUp   => {self.sm_step(data, MenuAlarm,       Self::menu_alarm,       None);},
                 BtnMid  => {self.sm_step(data, PgStopwatch,     Self::pg_stopwatch,     None);},
-                BtnDown => {self.sm_step(data, MenuTime,        Self::menu_time,        None);},
+                BtnDown => {self.sm_step(data, MenuSnake,       Self::menu_snake,       None);},
                 _ => (),
             } },
 
             MenuAlarmed => { match ev {
                 Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
                 BtnMid  => {self.sm_step(data, MenuTime,        Self::menu_time,        Some(Self::mv_alarm_reset));},
+                _ => (),
+            } },
+
+            MenuSnake => { match ev {
+                Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
+                BtnUp   => {self.sm_step(data, MenuStopwatch,   Self::menu_alarm,       None);},
+                BtnMid  => {self.sm_step(data, MenuSnake,       Self::menu_snake,       Some(Self::pg_snake));},
+                BtnDown => {self.sm_step(data, MenuTime,        Self::menu_time,        None);},
                 _ => (),
             } },
 

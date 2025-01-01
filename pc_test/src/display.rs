@@ -1,5 +1,5 @@
 #[path = "../../src/display/shape.rs"]
-mod shape;
+pub mod shape;
 
 #[path = "../../src/display/font.rs"]
 pub mod font;
@@ -31,11 +31,6 @@ impl Display
         println!("###########################################################################");
         println!("simple display debugger");
         println!("###########################################################################");
-    }
-
-    pub fn sleep(&self)
-    {
-
     }
 
     pub fn update(&mut self)

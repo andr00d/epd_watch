@@ -1,5 +1,5 @@
 mod display;
-mod shape;
+pub mod shape;
 pub mod font;
 
 use nrf52832_hal::spim::Spim;

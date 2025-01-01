@@ -7,6 +7,7 @@ pub enum PageState
     MenuSettings,
     MenuAlarm,
     MenuStopwatch,
+    MenuSnake,
     MenuAlarmed,
     
     PgAlarmMode,

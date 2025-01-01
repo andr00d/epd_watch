@@ -2,6 +2,7 @@ use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
 
 #[derive(Copy)]
 #[derive(Clone)]
+#[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Event
 {
@@ -39,6 +40,8 @@ impl Io
         };
     }
 
+    ////////////////////////////////////////////
+
     pub fn wait_for_input(&mut self) -> Event
     {
         println!("(0): None\t(1): Minute\t(2): Alarm\t(3-5):Buttons");
@@ -58,6 +61,14 @@ impl Io
             _ => Event::NoEvent
         };
     }  
+
+
+    pub fn get_input_waitms(&mut self, _delay_ms: u16) -> Event
+    {
+        return self.wait_for_input();
+    }
+    
+    ////////////////////////////////////////////
 
     fn inc_clock(&mut self)
     {

@@ -28,7 +28,7 @@ impl Pages
 
         data.display.text(&time_str, 100, 75, 10, Anchor::Center);
         data.display.text(&dow_str, 100-offset, 50, 4, Anchor::Left);
-        data.display.text(&date_str, 100+offset, 50, 4, Anchor::Right)
+        data.display.text(&date_str, 100+offset, 50, 4, Anchor::Right);
     }
 
     pub(super) fn menu_settings(data: &mut SharedData) 
@@ -44,6 +44,11 @@ impl Pages
     pub(super) fn menu_stopwatch(data: &mut SharedData) 
     {
         data.display.text("stopwatch", 100, 88, 5, Anchor::Center);
+    }
+
+    pub(super) fn menu_snake(data: &mut SharedData) 
+    {
+        data.display.text("snake", 100, 88, 5, Anchor::Center);
     }
 
     pub(super) fn menu_alarmed(data: &mut SharedData) 
