@@ -95,10 +95,9 @@ impl Io
         let alarm = DayAlarm2{day: 1, hour: Hours::H24(1), minute: 1};
         rtc.set_alarm2_day(alarm, Alarm2Matching::OncePerMinute).unwrap();
         rtc.use_int_sqw_output_as_interrupt().unwrap();
+        let _ = rtc.clear_alarm1_matched_flag();
+        let _ = rtc.clear_alarm2_matched_flag();
         rtc.enable_alarm2_interrupts().unwrap();
-
-        NVIC::unpend(interrupt::GPIOTE);
-        unsafe { NVIC::unmask(interrupt::GPIOTE) };
 
         let data = IntData
         {
@@ -115,6 +114,8 @@ impl Io
             INTDATA.borrow(cs).replace(Some(data));
         });
 
+        NVIC::unpend(interrupt::GPIOTE);
+        unsafe { NVIC::unmask(interrupt::GPIOTE) };
 
         return Io {};
     }
@@ -133,6 +134,8 @@ impl Io
         });
         
         if ev.is_some() {return ev.unwrap();}
+
+        // TODO: power down to preserve battery
         rprintln!("wfi");
         cortex_m::asm::wfi();
         
@@ -144,7 +147,6 @@ impl Io
         });
 
         if ev.is_none() {return Event::NoEvent;}
-        // if ev.unwrap() == Event::Rtc {ev = Some(self.check_rtc());}
         return ev.unwrap();
     }    
 

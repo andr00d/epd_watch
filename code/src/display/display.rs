@@ -21,7 +21,7 @@ impl Display
         let dc = pins.dc.into_push_pull_output(Level::Low);
 
         let clk = pins.clk.into_push_pull_output(Level::Low);
-        let mosi = pins.mosi.into_push_pull_output(Level::Low);
+        let mosi = pins.mosi.into_push_pull_output(Level::High);
         let miso = pins.miso.into_floating_input();
 
         let pins = nrf52832_hal::spim::Pins 
@@ -34,7 +34,7 @@ impl Display
         let spi = Spim::new(
             spim,
             pins,
-            nrf52832_hal::spim::Frequency::K500,
+            nrf52832_hal::spim::Frequency::K250,
             nrf52832_hal::spim::MODE_0,
             0,
         );
@@ -53,6 +53,8 @@ impl Display
 
     pub fn init(&mut self)
     {
+        _ = self.power.set_state(PinState::Low);
+        cortex_m::asm::delay(20_000_000);
         _ = self.power.set_state(PinState::High);
         cortex_m::asm::delay(660_000);
         
@@ -110,14 +112,14 @@ impl Display
 
     pub fn update(&mut self)
     {
-        self.send_cmd(Self::DATA_TRANSMISSION_1);
+        self.send_cmd(Self::DATA_TRANSMISSION_2);
         
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::High);
         _ = SpiBus::write(&mut self.spi, &self.buffer_curr);
         _ = self.cs.set_state(PinState::High);
 
-        self.send_cmd(Self::DATA_TRANSMISSION_2);
+        self.send_cmd(Self::DATA_TRANSMISSION_1);
         
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::High);
@@ -156,9 +158,7 @@ impl Display
     {
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::Low);
-        cortex_m::interrupt::free(|cs| {
-            _ = SpiBus::write(&mut self.spi, &[cmd]);
-        });
+        cortex_m::interrupt::free(|_| {  _ = SpiBus::write(&mut self.spi, &[cmd]); });
         _ = self.cs.set_state(PinState::High);
     }
 
@@ -166,20 +166,16 @@ impl Display
     {
         _ = self.cs.set_state(PinState::Low);
         _ = self.dc.set_state(PinState::High);
-        cortex_m::interrupt::free(|cs| {
-        _ = SpiBus::write(&mut self.spi, data);
-        });
+        cortex_m::interrupt::free(|_| { _ = SpiBus::write(&mut self.spi, data); });
         _ = self.cs.set_state(PinState::High);
     }
 
     fn wait_busy(&mut self)
     {
-        rprintln!("wait start");
         // TODO: switch this to sleep
         while self.busy.is_low().unwrap()
         {
             cortex_m::asm::delay(10_000_000);
-            rprintln!("wait loop");
         }
     }
 
