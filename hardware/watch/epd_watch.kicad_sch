@@ -4429,10 +4429,6 @@
 		(uuid "8fdf4838-49a1-41bc-9c95-eda33fff5142")
 	)
 	(no_connect
-		(at 252.73 123.19)
-		(uuid "917b3e46-27a5-40ca-a359-03bf10956b93")
-	)
-	(no_connect
 		(at 259.08 41.91)
 		(uuid "b3571336-f616-4c92-9bb1-7e648dcc5699")
 	)
@@ -4443,6 +4439,10 @@
 	(no_connect
 		(at 267.97 130.81)
 		(uuid "b997b443-71b7-48d1-bd4e-dd1183fdf08a")
+	)
+	(no_connect
+		(at 237.49 140.97)
+		(uuid "dc44de7d-f1c5-4f52-8bb0-8c14384538e3")
 	)
 	(no_connect
 		(at 259.08 26.67)
@@ -4817,6 +4817,16 @@
 			(type default)
 		)
 		(uuid "2993d22a-4831-4a85-af99-31f461639451")
+	)
+	(wire
+		(pts
+			(xy 237.49 140.97) (xy 240.03 140.97)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "29a6202c-e819-4ca1-a74e-1fedc27cace6")
 	)
 	(wire
 		(pts
@@ -5477,16 +5487,6 @@
 			(type default)
 		)
 		(uuid "7dd8ca9b-5855-443a-bf7d-254e14ed6de2")
-	)
-	(wire
-		(pts
-			(xy 237.49 140.97) (xy 240.03 140.97)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7e52d5fe-5f3e-46fc-bb37-143090f85231")
 	)
 	(wire
 		(pts
@@ -7730,26 +7730,6 @@
 		(uuid "fd2db885-7003-4623-8f65-21a8d8c3fd19")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 93.98 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "3.3V"
-		(shape input)
-		(at 237.49 140.97 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "fd34f1b6-19a5-4409-ab1e-724cb618bcf2")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 237.49 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11474,6 +11454,71 @@
 			(project "epd_watch"
 				(path "/ace35959-5458-48fc-8e56-dfb1f59f443c"
 					(reference "C1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "EPD_watch-rescue:GND-power")
+		(at 252.73 123.19 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a123bca8-67b0-4ddc-a191-31d4dd6dd74b")
+		(property "Reference" "#PWR015"
+			(at 252.73 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 252.73 118.364 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 252.73 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 252.73 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 252.73 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "32dc7ae7-e792-435d-8813-f3aff6688cb9")
+		)
+		(instances
+			(project "epd_watch"
+				(path "/ace35959-5458-48fc-8e56-dfb1f59f443c"
+					(reference "#PWR015")
 					(unit 1)
 				)
 			)
