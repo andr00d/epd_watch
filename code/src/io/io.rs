@@ -3,17 +3,15 @@ use nrf52832_pac::interrupt;
 use nrf52832_hal::gpiote::Gpiote;
 use embedded_hal::digital::InputPin;
 use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
-use ds323x::{DateTimeAccess, Ds323x, Datelike};
+use ds323x::{DateTimeAccess, Ds323x, Datelike, Timelike};
 use ds323x::{DayAlarm2, WeekdayAlarm1, Hours, Alarm1Matching, Alarm2Matching};
 use ds323x::interface::I2cInterface;
 use ds323x::ic::DS3231;
 use rtt_target::rprintln;
-use ds323x::Timelike;
 use heapless::String;
 
 use cortex_m::peripheral::NVIC;
-use cortex_m::interrupt::Mutex;
-use cortex_m::interrupt::free;
+use cortex_m::interrupt::{Mutex, free};
 use core::cell::RefCell;
 use core::fmt::Write;
 use circular_buffer::CircularBuffer;
@@ -39,7 +37,9 @@ fn GPIOTE()
             if int_data.btn_dwn.is_low().unwrap() {int_data.buffer.push_back(Event::BtnDown);}
 
             // quick & dirty debounce
+            // TODO: make this not suck ass
             cortex_m::asm::delay(100_000);
+            rprintln!("ev");
             int_data.gpiote.reset_events();
         }
     });
@@ -82,7 +82,7 @@ impl Io
 {
     pub fn new(twi: nrf52832_hal::pac::TWIM0, gpiote: Gpiote, pins: IoPins) -> Io
     {
-        let mut buffer = CircularBuffer::<5, Event>::new();
+        let buffer = CircularBuffer::<5, Event>::new();
         let mut twim = hal::Twim::new(
             twi,
             hal::twim::Pins {sda: pins.sda, scl: pins.scl},
@@ -110,6 +110,7 @@ impl Io
             btn_dwn: pins.btn_dwn, 
         };
 
+        
         cortex_m::interrupt::free(|cs| {
             INTDATA.borrow(cs).replace(Some(data));
         });
@@ -125,28 +126,27 @@ impl Io
     pub fn wait_for_input(&mut self) -> Event
     {
         let mut ev = None;
+        while ev == None
+        {
+            cortex_m::interrupt::free(|cs| {
+                if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
+                {
+                    ev = int_data.buffer.pop_front();
+                }
+            });
+            
+            if ev.is_some() {return ev.unwrap();}
+            rprintln!("wfi");
+            cortex_m::asm::wfi();
+            
+            cortex_m::interrupt::free(|cs| {
+                if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
+                {
+                    ev = int_data.buffer.pop_front();
+                }
+            });
+        }
 
-        cortex_m::interrupt::free(|cs| {
-            if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
-            {
-                ev = int_data.buffer.pop_front();
-            }
-        });
-        
-        if ev.is_some() {return ev.unwrap();}
-
-        // TODO: power down to preserve battery
-        rprintln!("wfi");
-        cortex_m::asm::wfi();
-        
-        cortex_m::interrupt::free(|cs| {
-            if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
-            {
-                ev = int_data.buffer.pop_front();
-            }
-        });
-
-        if ev.is_none() {return Event::NoEvent;}
         return ev.unwrap();
     }    
 
@@ -166,11 +166,29 @@ impl Io
         return ev.unwrap_or(Event::NoEvent);
     }
 
+    pub fn buffer_has_ev(&self) -> bool
+    {
+        let mut has_ev = false;
+
+        cortex_m::interrupt::free(|cs| {
+            if let Some(ref mut int_data) = INTDATA.borrow(cs).borrow_mut( ).deref_mut( ) 
+            {
+                has_ev = int_data.buffer.front().is_some();
+            }
+        });
+
+        return has_ev;
+    }
+
     ////////////////////////////////////////////
 
     pub fn get_datetime(&mut self) -> NaiveDateTime
     {
-        let mut dt = NaiveDateTime::from_timestamp(0, 0);
+
+        let nd = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let nt = NaiveTime::from_hms_opt(12, 0, 0).unwrap();
+        let mut dt = NaiveDateTime::new(nd, nt);
+
         free(|cs| {
             if let Some(ref mut int_data) = get_intdata!(cs) 
             {
@@ -193,6 +211,8 @@ impl Io
             if let Some(ref mut int_data) = get_intdata!(cs) 
             {
                 result = int_data.rtc.set_datetime(&dt).is_ok();
+                let _ = int_data.rtc.clear_alarm1_matched_flag();
+                let _ = int_data.rtc.clear_alarm2_matched_flag();
             }
         });
 
@@ -233,8 +253,9 @@ impl Io
 
     ////////////////////////////////////////////
 
-    pub fn set_alarm(&mut self, d: u8, h: u8, m: u8)
+    pub fn set_alarm(&mut self, d: u8, h: u8, m: u8) -> bool
     {
+        let mut result = false;
         let alarm = WeekdayAlarm1
         {
             weekday:d, 
@@ -246,10 +267,12 @@ impl Io
         free(|cs| {
             if let Some(ref mut int_data) = get_intdata!(cs) 
             {
-                int_data.rtc.set_alarm1_weekday(alarm, Alarm1Matching::AllMatch).unwrap();
-                let _ = int_data.rtc.enable_alarm1_interrupts();
+                result = int_data.rtc.set_alarm1_weekday(alarm, Alarm1Matching::AllMatch).is_ok();
+                if result {let _ = int_data.rtc.enable_alarm1_interrupts();}
             }
         });
+        
+        return result;
     }
 
     pub fn disable_alarm(&mut self)

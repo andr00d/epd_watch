@@ -27,10 +27,12 @@ pub struct Display
 {
     buffer_curr: [u8; BUFFSIZE],
     buffer_old: [u8; BUFFSIZE],
-    power: Pin<Output<PushPull>>,
+    // power: Pin<Output<PushPull>>,
     spi: Spim<nrf52832_hal::pac::SPIM2>,
     busy: Pin<Input<Floating>>,
     res: Pin<Output<PushPull>>,
     cs: Pin<Output<PushPull>>,
     dc: Pin<Output<PushPull>>,
+    sleeping: bool,
+    clean_update: bool,
 }

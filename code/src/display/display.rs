@@ -2,7 +2,7 @@ use nrf52832_hal::gpio::Level;
 use nrf52832_hal::spim::Spim;
 use embedded_hal::digital::{InputPin, OutputPin, PinState};
 use embedded_hal::spi::SpiBus;
-use rtt_target::rprintln;
+// use rtt_target::rprintln;
 
 use crate::display::{Display, BUFFSIZE};
 use crate::display::DispPins;
@@ -14,11 +14,12 @@ impl Display
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
         let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
 
-        let power = pins.power.into_push_pull_output(Level::Low);
+        let _power = pins.power.into_push_pull_output(Level::High);
         let busy = pins.busy.into_floating_input();
         let res = pins.res.into_push_pull_output(Level::Low);
         let cs = pins.cs.into_push_pull_output(Level::Low);
         let dc = pins.dc.into_push_pull_output(Level::Low);
+        cortex_m::asm::delay(660_000);
 
         let clk = pins.clk.into_push_pull_output(Level::Low);
         let mosi = pins.mosi.into_push_pull_output(Level::High);
@@ -34,7 +35,7 @@ impl Display
         let spi = Spim::new(
             spim,
             pins,
-            nrf52832_hal::spim::Frequency::K250,
+            nrf52832_hal::spim::Frequency::M8,
             nrf52832_hal::spim::MODE_0,
             0,
         );
@@ -42,34 +43,30 @@ impl Display
         return Display{
             buffer_curr: buffer_curr,
             buffer_old: buffer_old,
-            power: power,
+            // power: power,
             spi: spi,
             busy: busy, 
             res: res,
             cs: cs,
             dc: dc,
+            sleeping: true,
+            clean_update: true,
         };
     } 
 
     pub fn init(&mut self)
-    {
-        _ = self.power.set_state(PinState::Low);
-        cortex_m::asm::delay(20_000_000);
-        _ = self.power.set_state(PinState::High);
-        cortex_m::asm::delay(660_000);
-        
+    {        
         // Module reset (At least 10ms delay between)
         _ = self.res.set_state(PinState::Low);
         cortex_m::asm::delay(660_000);
         _ = self.res.set_state(PinState::High);
         cortex_m::asm::delay(660_000);
 
-        cortex_m::asm::delay(6_600_000);
-
         // startup sequence
         // raw hex commands are undocumented but needed.
-        self.send_cmd(Self::PANEL_SETTING); // panel setting
-        self.send_data(&[0xdf]);
+        self.send_cmd(Self::PANEL_SETTING);
+        if self.clean_update {self.send_data(&[0xdf]);}
+        else {self.send_data(&[0xff]);}
         self.send_data(&[0x0e]);
         self.send_cmd(0x4d);
         self.send_data(&[0x55]);
@@ -92,26 +89,44 @@ impl Display
         self.send_cmd(Self::POWER_SAVING);
         self.send_data(&[0x00]);
 
+        if !self.clean_update
+        {
+            self.send_cmd(Self::LUT_VCOM);
+            self.send_data(&Self::LUT_ARR_DC);
+            self.send_cmd(Self::LUT_WW);
+            self.send_data(&Self::LUT_ARR_WW);
+            self.send_cmd(Self::LUT_BW);
+            self.send_data(&Self::LUT_ARR_BW);
+            self.send_cmd(Self::LUT_WB);
+            self.send_data(&Self::LUT_ARR_WB);
+            self.send_cmd(Self::LUT_BB);
+            self.send_data(&Self::LUT_ARR_BB);
+        }
+        else {self.clean_update = false;}
+
         // if it hangs here, good luck debugging!
         self.send_cmd(Self::POWER_ON);
-        cortex_m::asm::delay(100_000);
         self.wait_busy();
+
+
+        self.sleeping = false;
     }
 
     pub fn sleep(&mut self)
     {
+        self.sleeping = true;
+        // self.send_cmd(Self::PARTIAL_OUT);
         self.send_cmd(Self::POWER_OFF);
         self.wait_busy();
         cortex_m::asm::delay(100_000);
         self.send_cmd(Self::DEEP_SLEEP);
         self.send_data(&[0xA5]); // default
-
-        cortex_m::asm::delay(10_000_000);
-        _ = self.power.set_state(PinState::Low);
     }
 
     pub fn update(&mut self)
     {
+        if self.sleeping {self.init();}
+
         self.send_cmd(Self::DATA_TRANSMISSION_2);
         
         _ = self.cs.set_state(PinState::Low);
@@ -127,11 +142,15 @@ impl Display
         _ = self.cs.set_state(PinState::High);
 
         self.send_cmd(Self::DISPLAY_REFRESH);
-        cortex_m::asm::delay(100_000);
         self.wait_busy();
 
         (self.buffer_curr, self.buffer_old) = (self.buffer_old, self.buffer_curr);
         self.buffer_curr.fill(0xff);
+    }
+
+    pub fn set_clean_update(&mut self)
+    {
+        self.clean_update = true;
     }
 
     ////////////////////////////////////
@@ -173,9 +192,10 @@ impl Display
     fn wait_busy(&mut self)
     {
         // TODO: switch this to sleep
+        cortex_m::asm::delay(100_000);
         while self.busy.is_low().unwrap()
         {
-            cortex_m::asm::delay(10_000_000);
+            cortex_m::asm::delay(100_000);
         }
     }
 
@@ -195,11 +215,11 @@ impl Display
     const DISPLAY_REFRESH: u8 =             0x12;
     const DATA_TRANSMISSION_2: u8 =         0x13;
     // const AUTO_SEQUENCE: u8 =               0x17;
-    // const LUT_VCOM: u8 =                    0x20;
-    // const LUT_WW: u8 =                      0x21;
-    // const LUT_BW: u8 =                      0x22;
-    // const LUT_WB: u8 =                      0x23;
-    // const LUT_BB: u8 =                      0x24;
+    const LUT_VCOM: u8 =                    0x20;
+    const LUT_WW: u8 =                      0x21;
+    const LUT_BW: u8 =                      0x22;
+    const LUT_WB: u8 =                      0x23;
+    const LUT_BB: u8 =                      0x24;
     // const LUT_OPTION: u8 =                  0x2A;
     // const PLL_CONTROL: u8 =                 0x30;
     // const TEMP_SENSOR_CALLIBRATION: u8 =    0x40;
@@ -227,4 +247,50 @@ impl Display
     const POWER_SAVING: u8 =                0xE3;
     // const LVD_VOLTAGE_SELECT: u8 =          0xE4;
     // const FORCE_TEMP: u8 =                  0xE5;
+
+
+    // LUTs from the STM32 sample on the GDEW0154m09 gooddisplay page
+    const LUT_ARR_DC: [u8; 56] =
+    [
+        0x01, 0x04, 0x04, 0x03, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    const LUT_ARR_WW: [u8; 42] =
+    [
+        0x01, 0x04, 0x04, 0x03, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    ];
+    
+    const LUT_ARR_BW: [u8; 56] =
+    [
+        0x01, 0x84, 0x84, 0x83, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    ];
+    
+    const LUT_ARR_WB: [u8; 56] =
+    [
+        0x01, 0x44, 0x44, 0x43, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    ];
+    
+    const LUT_ARR_BB: [u8; 56] =
+    [
+        0x01, 0x04, 0x04, 0x03, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+    ];
 }

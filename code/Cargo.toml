@@ -8,7 +8,7 @@ cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.3", features = ["device"] }
 cortex-m-rtic = { version = "1", default-features = false }
 chrono = { version = "0.4.35", default-features = false }
-ds323x = "0.5.1"
+ds323x = "0.6"
 embedded-hal = "1.0.0"
 systick-monotonic = "1.0.0"
 rtt-target = "0.6.0"

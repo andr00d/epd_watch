@@ -51,6 +51,11 @@ impl Display
         println!("{}", output);
         self.buffer_curr.fill(0xff);
     }
+
+    pub fn set_clean_update(&self)
+    {
+        // not used in pc_test
+    }
     
     ////////////////////////////////////
     // used a lot by other display functions.

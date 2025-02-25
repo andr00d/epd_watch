@@ -64,17 +64,17 @@ impl Pages
                 _ => (),
             } },
 
-            MenuAlarmed => { match ev {
-                Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
-                BtnMid  => {self.sm_step(data, MenuTime,        Self::menu_time,        Some(Self::mv_alarm_reset));},
-                _ => (),
-            } },
-
             MenuSnake => { match ev {
                 Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
                 BtnUp   => {self.sm_step(data, MenuStopwatch,   Self::menu_stopwatch,   None);},
                 BtnMid  => {self.sm_step(data, MenuSnake,       Self::menu_snake,       Some(Self::pg_snake));},
                 BtnDown => {self.sm_step(data, MenuTime,        Self::menu_time,        None);},
+                _ => (),
+            } },
+
+            MenuAlarmed => { match ev {
+                Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_alarm_trigger));},
+                BtnMid  => {self.sm_step(data, MenuTime,        Self::menu_time,        Some(Self::mv_alarm_reset));},
                 _ => (),
             } },
 

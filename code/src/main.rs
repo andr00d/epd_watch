@@ -24,6 +24,8 @@ pub const NFCPINS: *mut u32 = 0x1000120C as *mut u32;
 fn connect_parts() -> (Display, Io)
 {
     let p = pac::Peripherals::take().unwrap();
+    let p0 = hal::gpio::p0::Parts::new(p.P0);
+    let gpiote = Gpiote::new(p.GPIOTE);
 
     // i have to add this because im stupid and used NFC pins.
     unsafe
@@ -39,8 +41,9 @@ fn connect_parts() -> (Display, Io)
         else {rprintln!("NFC pins already set to GPIO");}
     }
 
-    let p0 = hal::gpio::p0::Parts::new(p.P0);
-    let gpiote = Gpiote::new(p.GPIOTE);
+    // enable dc/dc for lower power consumption
+    p.POWER.dcdcen.write(|w| w.dcdcen().enabled());
+    rprintln!("enabled DC/DC");
 
     let disp_pins = DispPins 
     {
@@ -70,12 +73,10 @@ fn connect_parts() -> (Display, Io)
     gpiote.port().input_pin(&io_pins.btn_dwn).low();
     gpiote.port().enable_interrupt();
 
-    let mut display = Display::new(p.SPIM2, disp_pins);
+    let display = Display::new(p.SPIM2, disp_pins);
     let io = Io::new(p.TWIM0, gpiote, io_pins);
-    display.init();
     return (display, io);
 }
-
 
 #[entry]
 fn main() -> ! 
@@ -92,8 +93,8 @@ fn main() -> !
 
     loop 
     {
-        let ev = shared.io.wait_for_input();
-        if ev == Event::NoEvent {continue;}
+        if !shared.io.buffer_has_ev() {shared.display.sleep();}
+        let ev = shared.io.wait_for_input(); 
 
         pages.update_page(ev, &mut shared);
         if shared.update {shared.display.update()};

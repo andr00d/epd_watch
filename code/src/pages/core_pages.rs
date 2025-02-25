@@ -2,7 +2,7 @@
 use core::fmt::Write;
 #[cfg(target_os = "none")]
 use heapless::String;
-use chrono::Duration;
+use chrono::{Duration, Timelike};
 
 use crate::pages::Pages;
 use crate::shared_data::{SharedData, AlarmMode};
@@ -25,7 +25,9 @@ impl Pages
             true => (date_width / 2) as u8,
             false => (time_width / 2) as u8,
         };
-
+        
+        if data.io.get_datetime().minute() == 0 {data.display.set_clean_update();}
+        
         data.display.text(&time_str, 100, 75, 10, Anchor::Center);
         data.display.text(&dow_str, 100-offset, 50, 4, Anchor::Left);
         data.display.text(&date_str, 100+offset, 50, 4, Anchor::Right);
@@ -307,14 +309,14 @@ impl Pages
     { 
         // TODO: doesn't allow setting day to leapday.
         let days: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        data.day = if data.day >= days[data.month as usize] {0} else {data.day + 1}; 
+        data.day = if data.day >= days[data.month as usize] {1} else {data.day + 1}; 
     }
 
     pub(super) fn mv_dtset_daydown(data: &mut SharedData) 
     { 
         // TODO: doesn't allow setting day to leapday.
         let days: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        data.day = if data.day == 0 {days[data.month as usize]} else {data.day - 1};
+        data.day = if data.day == 1 {days[data.month as usize]} else {data.day - 1};
     }
     
 }
