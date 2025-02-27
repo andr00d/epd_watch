@@ -48,7 +48,7 @@ impl Pages
         {
             if state.menu_active {Self::draw_menu(data, &mut state);}
             else {Self::draw_game(data, &mut state);}
-            data.display.update();
+            data.display.update(&mut data.io);
 
             let ev = data.io.get_input_waitms(500);
             let exit = Self::update_game(ev, &mut state); 

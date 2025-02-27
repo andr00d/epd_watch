@@ -6,6 +6,7 @@ use embedded_hal::spi::SpiBus;
 
 use crate::display::{Display, BUFFSIZE};
 use crate::display::DispPins;
+use crate::Io;
 
 impl Display 
 {
@@ -54,13 +55,13 @@ impl Display
         };
     } 
 
-    pub fn init(&mut self)
+    pub fn init(&mut self, io: &mut Io)
     {        
         // Module reset (At least 10ms delay between)
         _ = self.res.set_state(PinState::Low);
-        cortex_m::asm::delay(660_000);
+        io.waitms(10);
         _ = self.res.set_state(PinState::High);
-        cortex_m::asm::delay(660_000);
+        io.waitms(10);
 
         // startup sequence
         // raw hex commands are undocumented but needed.
@@ -106,26 +107,32 @@ impl Display
 
         // if it hangs here, good luck debugging!
         self.send_cmd(Self::POWER_ON);
-        self.wait_busy();
-
-
+        self.wait_busy(io);
         self.sleeping = false;
     }
 
-    pub fn sleep(&mut self)
+    pub fn sleep(&mut self, io: &mut Io)
     {
         self.sleeping = true;
-        // self.send_cmd(Self::PARTIAL_OUT);
         self.send_cmd(Self::POWER_OFF);
-        self.wait_busy();
-        cortex_m::asm::delay(100_000);
+        
+        // with the normal busy loop, the display goes fucky
+        // (and somehow, only when rtt is not attached)
+        // TODO: find out why
+        cortex_m::asm::delay(64_000);
+        while self.busy.is_low().unwrap()
+        {
+            cortex_m::asm::delay(64_000);
+        }
+        io.waitms(5);
+        
         self.send_cmd(Self::DEEP_SLEEP);
         self.send_data(&[0xA5]); // default
     }
 
-    pub fn update(&mut self)
+    pub fn update(&mut self, io: &mut Io)
     {
-        if self.sleeping {self.init();}
+        if self.sleeping {self.init(io);}
 
         self.send_cmd(Self::DATA_TRANSMISSION_2);
         
@@ -142,7 +149,7 @@ impl Display
         _ = self.cs.set_state(PinState::High);
 
         self.send_cmd(Self::DISPLAY_REFRESH);
-        self.wait_busy();
+        self.wait_busy(io);
 
         (self.buffer_curr, self.buffer_old) = (self.buffer_old, self.buffer_curr);
         self.buffer_curr.fill(0xff);
@@ -189,13 +196,12 @@ impl Display
         _ = self.cs.set_state(PinState::High);
     }
 
-    fn wait_busy(&mut self)
+    fn wait_busy(&mut self, io: &mut Io)
     {
-        // TODO: switch this to sleep
-        cortex_m::asm::delay(100_000);
+        io.waitms(10);
         while self.busy.is_low().unwrap()
         {
-            cortex_m::asm::delay(100_000);
+            io.waitms(10);
         }
     }
 

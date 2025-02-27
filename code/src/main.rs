@@ -2,7 +2,8 @@
 #![no_std]
 
 use cortex_m_rt::entry;
-use hal::pac;
+use hal::{pac, Rtc};
+use nrf52832_hal::rtc::RtcInterrupt;
 use nrf52832_hal as hal;
 use rtt_target::{rtt_init_print, rprintln};
 use nrf52832_hal::gpiote::Gpiote;
@@ -23,6 +24,7 @@ pub const NFCPINS: *mut u32 = 0x1000120C as *mut u32;
 
 fn connect_parts() -> (Display, Io)
 {
+    let mut cp = hal::pac::CorePeripherals::take().unwrap();
     let p = pac::Peripherals::take().unwrap();
     let p0 = hal::gpio::p0::Parts::new(p.P0);
     let gpiote = Gpiote::new(p.GPIOTE);
@@ -44,6 +46,11 @@ fn connect_parts() -> (Display, Io)
     // enable dc/dc for lower power consumption
     p.POWER.dcdcen.write(|w| w.dcdcen().enabled());
     rprintln!("enabled DC/DC");
+    
+    let clocks = hal::clocks::Clocks::new(p.CLOCK);
+    let _ = clocks.start_lfclk();
+    let mut rtc = Rtc::new(p.RTC0, 0).unwrap();
+    rtc.enable_interrupt(RtcInterrupt::Compare0, Some(&mut cp.NVIC));
 
     let disp_pins = DispPins 
     {
@@ -74,7 +81,7 @@ fn connect_parts() -> (Display, Io)
     gpiote.port().enable_interrupt();
 
     let display = Display::new(p.SPIM2, disp_pins);
-    let io = Io::new(p.TWIM0, gpiote, io_pins);
+    let io = Io::new(p.TWIM0, rtc, gpiote, io_pins);
     return (display, io);
 }
 
@@ -88,16 +95,16 @@ fn main() -> !
     let mut pages = Pages::new();
 
     pages.update_page(Event::Minute, &mut shared);
-    shared.display.update();
+    shared.display.update(&mut shared.io);
     rprintln!("startup done");
 
     loop 
     {
-        if !shared.io.buffer_has_ev() {shared.display.sleep();}
+        if !shared.io.buffer_has_ev() {shared.display.sleep(&mut shared.io);}
         let ev = shared.io.wait_for_input(); 
 
         pages.update_page(ev, &mut shared);
-        if shared.update {shared.display.update()};
+        if shared.update {shared.display.update(&mut shared.io)};
     }
 }
 
