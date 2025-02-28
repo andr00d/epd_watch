@@ -26,7 +26,7 @@ fn main()
     let mut pages = Pages::new();
 
     pages.update_page(Event::Minute, &mut shared);
-    shared.display.update();
+    shared.display.update(shared.io);
 
     loop 
     {
@@ -34,6 +34,6 @@ fn main()
         if ev == Event::NoEvent {continue;}
 
         pages.update_page(ev, &mut shared);
-        shared.display.update();
+        shared.display.update(shared.io);
     }
 }

@@ -4,6 +4,7 @@ pub mod shape;
 #[path = "../../src/display/font.rs"]
 pub mod font;
 
+
 pub const SIZE: usize = 200;
 pub const BUFFSIZE: usize = SIZE*((SIZE+7)/8);
 
@@ -11,6 +12,8 @@ pub struct Display
 {
     buffer_curr: [u8; BUFFSIZE],
 }
+
+use crate::Io;
 
 ///////////////////////////////////////
 ///////////////////////////////////////
@@ -33,7 +36,7 @@ impl Display
         println!("###########################################################################");
     }
 
-    pub fn update(&mut self)
+    pub fn update(&mut self, _io: &mut Io)
     {
         // uses the braille block characters to generate the screen
         // https://en.wikipedia.org/wiki/Braille_Patterns#Block
