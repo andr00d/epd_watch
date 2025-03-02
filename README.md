@@ -20,3 +20,8 @@ After this is finished, just place the watch on the charger and run ```cargo emb
 
 ## running on your pc
 There is a pc_test folder that allows additions to the watch to be tested a bit more easily than having to constantly wait for the watch to be programmed. simply go into the pc_test folder, type ```cargo run``` and you can test if everything is as you expect.
+
+## frame generation
+if you want to play other videos than bad apple on the watch, you can use ```frame_gen.py``` to create the files for any video. it'll create ```frames.txt```, simply replace vid_frames.rs with the contents of that file and you're good to go. 
+
+source of the bad apple frames is [this video](https://www.youtube.com/watch?v=i41KoE0iMYU)

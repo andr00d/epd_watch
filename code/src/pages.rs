@@ -2,6 +2,8 @@ pub mod pages;
 pub mod state;
 mod core_pages;
 mod snake;
+mod video;
+mod vid_frames;
 
 use crate::shared_data::SharedData;
 use crate::pages::state::PageState;

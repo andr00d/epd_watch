@@ -112,4 +112,113 @@ impl Display
         }
  
     }
+
+    // code based on https://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
+    pub fn triangle(&mut self, a: (u8, u8), b: (u8, u8), c: (u8, u8))
+    {
+        if a == b && b == c {return;}
+        // v1 to v3 are sorted by height
+        let mut v1;
+        let mut v2;
+        let mut v3;
+        let mut v4;
+
+        if a.1 <= b.1 && a.1 <= c.1 
+        {
+            v1 = (a.0 as f32, a.1 as f32);
+            if b.1 < c.1 {v2 = (b.0 as f32, b.1 as f32); v3 = (c.0 as f32, c.1 as f32);}
+            else {v2 = (c.0 as f32, c.1 as f32); v3 = (b.0 as f32, b.1 as f32);}
+        }
+        else if b.1 <= a.1 && b.1 <= c.1 
+        {
+            v1 = (b.0 as f32, b.1 as f32);
+            if a.1 < c.1 {v2 = (a.0 as f32, a.1 as f32); v3 = (c.0 as f32, c.1 as f32);}
+            else {v2 = (c.0 as f32, c.1 as f32); v3 = (a.0 as f32, a.1 as f32);}
+        }
+        else 
+        {
+            v1 = (c.0 as f32, c.1 as f32);
+            if a.1 < b.1 {v2 = (a.0 as f32, a.1 as f32); v3 = (b.0 as f32, b.1 as f32);}
+            else {v2 = (b.0 as f32, b.1 as f32); v3 = (a.0 as f32, a.1 as f32);}
+        }
+
+        v4 = (v1.0 + (((v2.1- v1.1) / (v3.1 - v1.1)) * (v3.0 - v1.0)), v2.1);
+        if v4.0 < v2.0 {(v4, v2) = (v2, v4);}
+
+        // dirty fix to prevent seeing the edges
+        // its a 200X200 screen, accuraccy doesnt matter :)
+        v1.1 -= 3.0;
+        v2.0 -= 3.0;
+        v3.1 += 3.0; 
+        v4.0 += 3.0;
+
+
+        // top tri
+        let top_slope1 = (v2.0 - v1.0) / (v2.1 - v1.1);
+        let top_slope2 = (v4.0 - v1.0) / (v4.1 - v1.1);
+
+        let mut top_x1 = v1.0;
+        let mut top_x2 = v1.0;
+
+        for i in v1.1 as u8..v2.1 as u8
+        {
+            self.line(top_x1, top_x2, i);
+            top_x1 += top_slope1;
+            top_x2 += top_slope2;
+        }
+
+        //bottom tri
+        let bottom_slope1 = (v3.0 - v2.0) / (v3.1 - v2.1);
+        let bottom_slope2 = (v3.0 - v4.0) / (v3.1 - v4.1);
+
+        let mut bottom_x1 = v3.0;
+        let mut bottom_x2 = v3.0;
+
+        for i in (v2.1 as u8..v3.1 as u8).rev()
+        {
+            self.line(bottom_x1, bottom_x2, i);
+            bottom_x1 -= bottom_slope1;
+            bottom_x2 -= bottom_slope2;
+        }
+    }
+
+    // adapted version of rect to speed up video drawing a teensy bit.
+    // also behaves better for animation than rect, didnt wanna find out why
+    fn line(&mut self, x1_in: f32, x2_in: f32, y: u8)
+    {
+        if y > 199 {return;}
+        let x1 = (x1_in as u8).min(200);
+        let x2 = (x2_in as u8).min(200);
+        let offset = y as usize * (SIZE/8);
+        
+        if (x2-x1) < 8
+        {
+            for x in x1..x2
+            { 
+                self.set_bit(offset + (x / 8) as usize, x % 8, false);
+            } 
+            return;
+        }
+
+        for i in ((x1+7)/8)..((x2)/8)
+        {
+            self.buffer_curr[offset + i as usize] = 0x0;
+        }
+        
+        if x1 % 8 > 0 
+        {
+            let byte = (0xff << (8-(x1 % 8))) as u8;
+            self.buffer_curr[offset + (x1 / 8) as usize] &= byte;
+        }
+
+        if (x2) % 8 > 0 
+        {
+            let byte = (0xff >> (x2) % 8) as u8;
+            self.buffer_curr[offset + ((x2)/8) as usize] &= byte ;
+        }
+
+        return;
+    }
+
+
 }

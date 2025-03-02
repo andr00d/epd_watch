@@ -53,6 +53,11 @@ impl Pages
         data.display.text("snake", 100, 88, 5, Anchor::Center);
     }
 
+    pub(super) fn menu_video(data: &mut SharedData) 
+    {
+        data.display.text(":)", 100, 88, 5, Anchor::Center);
+    }
+
     pub(super) fn menu_alarmed(data: &mut SharedData) 
     {
         let time_str = data.io.get_time_str();
