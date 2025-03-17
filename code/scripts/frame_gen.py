@@ -138,4 +138,4 @@ output_str = output_str + "];\n"
 print("writing to file...")
 with open('frames.txt', 'w') as file:
     file.write(output_str)
-print("written to file 'frames.txt,")
+print("written to file 'frames.txt'")

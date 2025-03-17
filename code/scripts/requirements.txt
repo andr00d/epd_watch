@@ -2,3 +2,4 @@ numpy==2.2
 opencv-python==4.11
 matplotlib==3.10
 triangle
+mido

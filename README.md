@@ -24,4 +24,8 @@ There is a pc_test folder that allows additions to the watch to be tested a bit 
 ## frame generation
 if you want to play other videos than bad apple on the watch, you can use ```frame_gen.py``` to create the files for any video. it'll create ```frames.txt```, simply replace vid_frames.rs with the contents of that file and you're good to go. 
 
+for the sound, the ```midi_to_beeps.py``` script is provided, pass it a midi with max one note at a time (if there are multiple notes at once it'll sound weird.) and you can copy the output into ```sound.rs```.
+
+do note that for the video you should build in release mode, otherwise the watch won't actually show anything. 
+
 source of the bad apple frames is [this video](https://www.youtube.com/watch?v=i41KoE0iMYU)

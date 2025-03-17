@@ -5,15 +5,16 @@ use cortex_m_rt::entry;
 use hal::{pac, Rtc};
 use nrf52832_hal::rtc::RtcInterrupt;
 use nrf52832_hal as hal;
+use nrf52832_hal::pwm::{Pwm, Prescaler, Channel};
 use rtt_target::{rtt_init_print, rprintln};
 use nrf52832_hal::gpiote::Gpiote;
+use nrf52832_hal::gpio::Level;
 
 use crate::display::DispPins;
 use crate::io::{Io, IoPins, Event};
 use crate::shared_data::SharedData;
 use crate::display::Display;
 use crate::pages::Pages;
-
 
 mod shared_data;
 mod display;
@@ -49,8 +50,12 @@ fn connect_parts() -> (Display, Io)
     
     let clocks = hal::clocks::Clocks::new(p.CLOCK);
     let _ = clocks.start_lfclk();
-    let mut rtc = Rtc::new(p.RTC0, 0).unwrap();
-    rtc.enable_interrupt(RtcInterrupt::Compare0, Some(&mut cp.NVIC));
+    let mut rtc0 = Rtc::new(p.RTC0, 0).unwrap();
+    let mut rtc1 = Rtc::new(p.RTC1, 0).unwrap();
+    let mut rtc2 = Rtc::new(p.RTC2, 0).unwrap();
+    rtc0.enable_interrupt(RtcInterrupt::Compare0, Some(&mut cp.NVIC));
+    rtc1.enable_interrupt(RtcInterrupt::Compare1, Some(&mut cp.NVIC));
+    rtc2.enable_interrupt(RtcInterrupt::Compare2, Some(&mut cp.NVIC));
 
     let disp_pins = DispPins 
     {
@@ -74,6 +79,10 @@ fn connect_parts() -> (Display, Io)
         btn_dwn : p0.p0_07.into_pullup_input().degrade(),
     };
     
+    let pwm = Pwm::new(p.PWM0);
+    let buzzer = p0.p0_18.into_push_pull_output(Level::High).degrade();
+    pwm.set_output_pin(Channel::C0, buzzer).set_prescaler(Prescaler::Div32);
+
     gpiote.port().input_pin(&io_pins.alarm).low();
     gpiote.port().input_pin(&io_pins.btn_up).low();
     gpiote.port().input_pin(&io_pins.btn_mid).low();
@@ -81,7 +90,7 @@ fn connect_parts() -> (Display, Io)
     gpiote.port().enable_interrupt();
 
     let display = Display::new(p.SPIM2, disp_pins);
-    let io = Io::new(p.TWIM0, rtc, gpiote, io_pins);
+    let io = Io::new(p.TWIM0, rtc0, rtc1, rtc2, pwm, gpiote, io_pins);
     return (display, io);
 }
 

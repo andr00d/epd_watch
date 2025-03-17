@@ -1,7 +1,9 @@
 use nrf52832_hal as hal;
 use nrf52832_pac::interrupt;
 use hal::gpiote::Gpiote;
-use nrf52832_pac::RTC0;
+use nrf52832_pac::{PWM0, RTC0, RTC1, RTC2};
+use nrf52832_hal::pwm::Pwm;
+use nrf52832_hal::prelude::U32Ext;
 use nrf52832_hal::rtc::{Rtc, RtcCompareReg, RtcInterrupt};
 use embedded_hal::digital::InputPin;
 use cortex_m::peripheral::NVIC;
@@ -21,6 +23,7 @@ use core::fmt::Write;
 use core::ops::DerefMut;
 
 use crate::io::{Io, IoPins, IntData, Event};
+use crate::io::sound::{NOTES_LIST, FREQ_LIST};
 
 static INTDATA: Mutex<RefCell<Option<IntData>>> = Mutex::new(RefCell::new(None));
 const MONTHS: [&str; 12] = ["jan", "feb", "mar", "apr" , "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -63,6 +66,41 @@ fn RTC0()
     });   
 }
 
+#[interrupt]
+fn RTC1() 
+{
+    free(|cs| {
+        if let Some(ref mut int_data) = get_intdata!(cs) 
+        {
+            let note = NOTES_LIST[int_data.curr_note];
+            int_data.curr_note += 1;
+            int_data.pwm.set_period((FREQ_LIST[note.0 as usize] as u32).hz());
+            let max_duty = int_data.pwm.max_duty();
+            let (ch0, _, _, _) = int_data.pwm.split_channels();
+            ch0.set_duty(max_duty / 2);
+
+            int_data.rtc1.clear_counter();
+            int_data.rtc1.reset_event(RtcInterrupt::Compare1);
+            int_data.rtc1.set_compare(RtcCompareReg::Compare1, DELAY_MS*note.1 as u32).unwrap();
+            int_data.rtc1.enable_counter();
+        }
+    });   
+}
+
+#[interrupt]
+fn RTC2() 
+{
+    free(|cs| {
+        if let Some(ref mut int_data) = get_intdata!(cs) 
+        {
+            int_data.rtc2.disable_counter();
+            int_data.rtc2.clear_counter();
+            int_data.rtc2.reset_event(RtcInterrupt::Compare2);
+            int_data.timer2_expired = true;
+        }
+    });   
+}
+
 fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52832_hal::pac::TWIM0>>, DS3231>) -> Event
 {
     match rtc.has_alarm1_matched()
@@ -98,7 +136,8 @@ fn check_rtc(rtc: &mut Ds323x<I2cInterface<hal::Twim<nrf52832_hal::pac::TWIM0>>,
 
 impl Io
 {
-    pub fn new(twi: hal::pac::TWIM0, rtc0: Rtc<RTC0>, gpiote: Gpiote, pins: IoPins) -> Io
+    pub fn new(twi: hal::pac::TWIM0, rtc0: Rtc<RTC0>, rtc1: Rtc<RTC1>, rtc2: Rtc<RTC2>,
+               pwm: Pwm<PWM0>, gpiote: Gpiote, pins: IoPins) -> Io
     {
         let buffer = CircularBuffer::<5, Event>::new();
         let mut twim = hal::Twim::new(
@@ -128,6 +167,11 @@ impl Io
             btn_up: pins.btn_up,
             btn_mid: pins.btn_mid,
             btn_dwn: pins.btn_dwn, 
+            rtc1: rtc1,
+            rtc2: rtc2,
+            timer2_expired: false,
+            pwm: pwm,
+            curr_note: 0,
         };
 
         
@@ -236,6 +280,52 @@ impl Io
         });
 
         return has_ev;
+    }
+    ////////////////////////////////////////////
+
+    pub fn rtc2_set_ms(&mut self, delay_ms: u32)
+    {
+        cortex_m::interrupt::free(|cs| {
+            if let Some(ref mut int_data) = get_intdata!(cs) 
+            {
+                int_data.rtc2.set_compare(RtcCompareReg::Compare2, DELAY_MS*delay_ms).unwrap();
+                int_data.rtc2.enable_counter();
+            }
+        });
+    }
+
+    pub fn rtc2_wait_finish(&mut self) -> Event
+    {
+        let mut expired = false;
+        let mut ev = None; 
+        
+        loop
+        {
+            cortex_m::asm::wfi();
+
+            cortex_m::interrupt::free(|cs| {
+                if let Some(ref mut int_data) = get_intdata!(cs) 
+                {
+                    if (int_data.buffer.front().is_some()) || int_data.timer2_expired
+                    {
+                        if !int_data.timer2_expired
+                        {
+                            int_data.rtc2.disable_counter();
+                            int_data.rtc2.clear_counter();
+                            int_data.rtc2.reset_event(RtcInterrupt::Compare2);
+                        }
+                        
+                        ev = int_data.buffer.pop_front();
+                        int_data.timer2_expired = false;
+                        expired = true;
+                    }
+                }
+            });
+
+            if ev.is_some() || expired {break;}
+        }
+
+        return ev.unwrap_or(Event::NoEvent);
     }
 
     ////////////////////////////////////////////
@@ -348,5 +438,38 @@ impl Io
     pub fn play_tone(&mut self)
     {
         // TODO: play 1 second tone signal
+    }
+
+    pub fn start_song(&mut self)
+    {
+        free(|cs| {
+            if let Some(ref mut int_data) = get_intdata!(cs) 
+            {
+                let note = NOTES_LIST[0];
+                int_data.curr_note = 1;
+                int_data.pwm.enable();
+                int_data.pwm.set_period((FREQ_LIST[note.0 as usize] as u32).hz());
+                let max_duty = int_data.pwm.max_duty();
+                let (ch0, _, _, _) = int_data.pwm.split_channels();
+                ch0.set_duty(max_duty / 2);
+
+                int_data.rtc1.clear_counter();
+                int_data.rtc1.set_compare(RtcCompareReg::Compare1, note.1 as u32).unwrap();
+                int_data.rtc1.enable_counter();
+            }
+        });
+    }
+
+    pub fn stop_song(&mut self)
+    {
+        free(|cs| {
+            if let Some(ref mut int_data) = get_intdata!(cs) 
+            {
+                int_data.rtc1.disable_counter();
+                int_data.rtc1.clear_counter();
+                int_data.rtc1.reset_event(RtcInterrupt::Compare1); 
+                int_data.pwm.disable();
+            }
+        });
     }
 }
