@@ -112,6 +112,7 @@ impl Pages
 
             PgStopwatch => { match ev {
                 Alarm   => {self.sm_step(data, MenuAlarmed,     Self::menu_alarmed,     Some(Self::mv_stopwatch_exit));},
+                Minute  => {self.sm_step(data, PgStopwatch,     Self::pg_stopwatch,     None);},
                 BtnUp   => {self.sm_step(data, PgStopwatch,     Self::pg_stopwatch,     Some(Self::mv_stopwatch_startstop));},
                 BtnMid  => {self.sm_step(data, MenuStopwatch,   Self::menu_stopwatch,   Some(Self::mv_stopwatch_exit));},
                 BtnDown => {self.sm_step(data, PgStopwatch,     Self::pg_stopwatch,     Some(Self::mv_stopwatch_rstlap));},

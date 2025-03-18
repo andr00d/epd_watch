@@ -5,7 +5,7 @@ use heapless::String;
 use chrono::{Duration, Timelike};
 
 use crate::pages::Pages;
-use crate::shared_data::{SharedData, AlarmMode};
+use crate::shared_data::{SharedData, AlarmMode, StopwatchState};
 use crate::display::font::Anchor;
 
 impl Pages
@@ -72,20 +72,42 @@ impl Pages
 
     pub(super) fn pg_stopwatch(data: &mut SharedData) 
     {
-        if data.stopwatch_started
+        data.display.rect(10, 40, 130, 2);
+
+        if data.stopwatch_state == StopwatchState::Started
         {
+            let time_elapsed = data.io.get_datetime() - data.time_start;
+            let time_str = data.io.get_td_str(time_elapsed);
+
+            data.display.text(&time_str, 70, 10, 5, Anchor::Center);
             data.display.text("stop", 195, 35, 3, Anchor::Right);
             data.display.text("exit", 195, 85, 3, Anchor::Right);
             data.display.text("lap", 195, 135, 3, Anchor::Right);
         }
         else
         {
+            if data.stopwatch_state == StopwatchState::Paused
+            {
+                let time_elapsed = data.io.get_datetime() - data.time_start;
+                let time_str = data.io.get_td_str(time_elapsed);
+                data.display.text(&time_str, 70, 10, 5, Anchor::Center); 
+            }
+            else
+            {
+                data.display.text("00:00", 70, 10, 5, Anchor::Center);
+            }
+
             data.display.text("start", 195, 35, 3, Anchor::Right);
             data.display.text("exit", 195, 85, 3, Anchor::Right);
             data.display.text("reset", 195, 135, 3, Anchor::Right); 
         }
 
-        //TODO: add stopwatch.
+        
+        for i in 0..4
+        {
+            let time_str = data.io.get_td_str(data.laps[i as usize]);
+            data.display.text(&time_str, 70, 52+(35*i), 5, Anchor::Center);
+        }
     }
 
     ///////////////////////////////////////////
@@ -169,44 +191,55 @@ impl Pages
 
     pub(super) fn mv_stopwatch_exit(data: &mut SharedData)
     {
+        data.stopwatch_state = StopwatchState::Stopped;
         let td = Duration::new(0,0).unwrap();
-        data.stopwatch_started = false;
         data.laps = [td, td, td, td];
         data.lap_index = 0;
     }
 
     pub(super) fn mv_stopwatch_startstop(data: &mut SharedData)
     {
-        if data.stopwatch_started
+        if data.stopwatch_state == StopwatchState::Started
         {
-            data.stopwatch_started = false;
-            if data.lap_index < 4
+            data.stopwatch_state = StopwatchState::Paused;
+            if data.lap_index >= data.laps.len() 
             {
-                let time = data.io.get_datetime() - data.time_start;
-                data.laps[data.lap_index] = time;
-                data.lap_index +=1;
+                for i in 0..3 { data.laps[i] = data.laps[i+1]; }
+                data.lap_index -= 1;
             }
+            
+            let time = data.io.get_datetime() - data.time_start;
+            data.laps[data.lap_index] = time;
+            data.lap_index +=1;
         }
         else
         {
-            data.stopwatch_started = true;
-            data.time_start = data.io.get_datetime();
+            if data.stopwatch_state == StopwatchState::Stopped
+            {
+                data.time_start = data.io.get_datetime();
+            }
+            
+            data.stopwatch_state = StopwatchState::Started;
         }
     }
 
     pub(super) fn mv_stopwatch_rstlap(data: &mut SharedData)
     {
-        if data.stopwatch_started
+        if data.stopwatch_state == StopwatchState::Started
         {
-            if data.lap_index < 4
+            if data.lap_index >= data.laps.len() 
             {
-                let time = data.io.get_datetime() - data.time_start;
-                data.laps[data.lap_index] = time;
-                data.lap_index +=1;
+                for i in 0..3 { data.laps[i] = data.laps[i+1]; }
+                data.lap_index -= 1;
             }
+
+            let time = data.io.get_datetime() - data.time_start;
+            data.laps[data.lap_index] = time;
+            data.lap_index +=1;
         }
         else
         {
+            data.stopwatch_state = StopwatchState::Stopped;
             let td = Duration::new(0,0).unwrap();
             data.laps = [td, td, td, td];
             data.lap_index = 0;

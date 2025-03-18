@@ -144,7 +144,6 @@ impl Display
 
     ////////////////////////////////////
     
-    // TODO: translate to upper case
     pub fn text(&mut self, text: &str, mut x: u8, y: u8, s: u8, anchor: Anchor)
     {
         if text == "" {return;}

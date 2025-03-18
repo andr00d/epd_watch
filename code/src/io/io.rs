@@ -7,7 +7,7 @@ use embedded_hal::digital::InputPin;
 use cortex_m::peripheral::NVIC;
 use cortex_m::interrupt::{Mutex, free};
 
-use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
+use chrono::{NaiveDateTime, NaiveDate, NaiveTime, TimeDelta};
 use ds323x::{DateTimeAccess, Ds323x, Datelike, Timelike};
 use ds323x::{DayAlarm2, WeekdayAlarm1, Hours, Alarm1Matching, Alarm2Matching};
 use ds323x::interface::I2cInterface;
@@ -309,6 +309,17 @@ impl Io
         return out;
     }
 
+    pub fn get_td_str(&mut self, td: TimeDelta) -> String<32>
+    {
+        let m = td.num_minutes();
+        let s = td.num_seconds() % 60;
+
+        let mut out = String::<32>::new();
+        let _ = write!(out, "{:02}:{:02}", m, s);
+        return out;
+    }
+
+    
     ////////////////////////////////////////////
 
     pub fn set_alarm(&mut self, d: u8, h: u8, m: u8) -> bool

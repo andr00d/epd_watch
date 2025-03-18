@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
+use chrono::{NaiveDateTime, NaiveDate, NaiveTime, TimeDelta};
 
 #[derive(Copy)]
 #[derive(Clone)]
@@ -97,6 +97,11 @@ impl Io
     pub fn get_time_str(&mut self) -> String
     {
         return format!("{:02}:{:02}", self.hour, self.minute);
+    }
+
+    pub fn get_td_str(&mut self, td: TimeDelta) -> String
+    {
+        return format!("{:02}:{:02}", td.num_minutes(), td.num_seconds() % 60);
     }
 
     pub fn get_dow_str(&mut self) -> String
