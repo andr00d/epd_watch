@@ -13,6 +13,15 @@ pub enum AlarmMode
     Weekly,
 }
 
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub enum StopwatchState
+{
+    Started,
+    Paused,
+    Stopped,
+}
+
 pub struct SharedData<'a>
 {
     // Core function data
@@ -35,7 +44,7 @@ pub struct SharedData<'a>
     pub alarm_minute: u8,
 
     // stopwatch data
-    pub stopwatch_started: bool,
+    pub stopwatch_state: StopwatchState,
     pub time_start: NaiveDateTime,
     pub laps: [Duration; 4],
     pub lap_index: usize,
@@ -68,7 +77,7 @@ impl SharedData<'_>
             alarm_hour: 0,
             alarm_minute: 0,
 
-            stopwatch_started: false,
+            stopwatch_state: StopwatchState::Stopped,
             time_start: dt,
             laps: [td, td, td, td],
             lap_index: 0,
