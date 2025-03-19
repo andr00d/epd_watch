@@ -70,6 +70,18 @@ impl Io
     
     ////////////////////////////////////////////
 
+    pub fn rtc2_set_ms(&mut self, _delay_ms: u32)
+    {
+        return;
+    }
+
+    pub fn rtc2_wait_finish(&mut self) -> Event
+    {
+        return self.wait_for_input();
+    }
+
+    ////////////////////////////////////////////
+
     fn inc_clock(&mut self)
     {
         self.minute = (self.minute + 1) % 60;
@@ -134,5 +146,15 @@ impl Io
     pub fn play_tone(&mut self)
     {
         rprintln!("play tone.");
+    }
+
+    pub fn start_song(&mut self)
+    {
+        rprintln!("starting song.");
+    }
+
+    pub fn stop_song(&mut self)
+    {
+        rprintln!("stopping song.");
     }
 }

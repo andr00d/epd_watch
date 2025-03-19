@@ -9,6 +9,7 @@ pub enum PageState
     MenuStopwatch,
     MenuSnake,
     MenuVideo,
+    MenuQR,
     MenuAlarmed,
     
     PgAlarmMode,
