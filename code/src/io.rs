@@ -54,6 +54,7 @@ struct IntData
     pub timer2_expired: bool,
     pub pwm: Pwm<PWM0>,
     pub curr_note: usize,
+    pub btwn_notes: bool,
 }
 
 pub struct Io {}

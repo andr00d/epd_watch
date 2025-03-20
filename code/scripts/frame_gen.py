@@ -7,6 +7,7 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import triangle as tr
+import time
 #######################################
 
 parser = argparse.ArgumentParser()
@@ -19,9 +20,40 @@ if args.framerate < 1 or args.framerate > 60:
     print(f"invalid framerate provided. ({args.framerate})")
     exit()
 
-if args.framecount < 1 or args.framecount > 500:
+if args.framecount < 1 or args.framecount > 1000:
     print(f"invalid framecount provided. ({args.framerate})")
     exit()
+
+aprox_lvl = 3
+min_pixels = 5
+
+#######################################
+
+def get_testpoint(cntr, cntr_i, i, contours, img):
+    # offsets = [(x, y) for x in [-2, 2] for y in [-2, 2] if not (x == 0 and y == 0)]
+    offsets = [(x, y) for x in [-6, -3, 0, 3, 6] for y in [-6, -3, 0, 3, 6] if not (x == 0 and y == 0)]
+    vertices = [(int(v.flatten()[0]), int(v.flatten()[1])) for v in cntr]
+
+    # get all other valid contours
+    other_cntrs = [cv2.approxPolyDP(cnt,aprox_lvl,True) for (cnt_i, cnt) in enumerate(contours) if not cnt_i == cntr_i]
+    other_cntrs = [cnt for cnt in other_cntrs if max([x[0][0] for x in cnt]) - min([x[0][0] for x in cnt]) >= min_pixels]
+    other_cntrs = [cnt for cnt in other_cntrs if max([x[0][1] for x in cnt]) - min([x[0][1] for x in cnt]) >= min_pixels]
+
+    # get nested contours
+    inner_cntrs = []
+    for cnt in other_cntrs:
+        vnt_verts = [(int(v.flatten()[0]), int(v.flatten()[1])) for v in cnt]
+        mean_pointval = np.array([cv2.pointPolygonTest(cntr, val, True) for val in vnt_verts]).mean()
+        if mean_pointval < 0:
+            inner_cntrs.append(cnt)
+
+    # create all valid testpoints
+    test_points = [(v[0] + offset[0], v[1] + offset[1]) for v in vertices for offset in offsets]
+    dists = [cv2.pointPolygonTest(cntr, p, True) for p in test_points]
+    min_dist = dists.index(max(dists))
+
+    return test_points[min_dist]
+
 
 #######################################
 
@@ -34,9 +66,6 @@ frame_skip = max(int(cap.get(cv2.CAP_PROP_FPS) / args.framerate), 1)
 if not cap.isOpened():
     print(f"error opening file ({args.path})")
     exit()
-
-# for _ in range(120):
-#     ret, img = cap.read()
 
 for i in range(args.framecount):
     print(f"working on frame {i}")
@@ -64,34 +93,39 @@ for i in range(args.framecount):
     seg = []
     holes = []
 
-    for cnt in contours: 
+    for (cnt_i, cnt) in enumerate(contours): 
 
-        approx = cv2.approxPolyDP(cnt,2,True)
+        approx = cv2.approxPolyDP(cnt,aprox_lvl,True)
         w = max([x[0][0] for x in approx]) - min([x[0][0] for x in approx])
         h = max([x[0][1] for x in approx]) - min([x[0][1] for x in approx])
-        if w <= 5 or h <= 5:
+        if w <= min_pixels or h <= min_pixels or len(approx) < 3:
             continue
 
-        # test point currently at center, can fuck up with certain concave shapes, but too lazy to fix for a meme.
-        test_point = np.array(approx).mean(axis=0)
-        img = cv2.circle(img, (int(test_point[0][0]), int(test_point[0][1])), 1, (255, 0, 0), 1) 
-        color = thresh[int(test_point[0][1]), int(test_point[0][0])]
+        test_point = get_testpoint(approx, cnt_i, i, contours, img)
+        img = cv2.circle(img, test_point, 1, (255, 0, 0), 1) 
+        color = thresh[test_point[1], test_point[0]]
         offset = len(pts)
 
         if color == 0:
-            holes.append(test_point[0])
+            holes.append(test_point)
 
-        for i, pnt in enumerate(approx):
+        for j, pnt in enumerate(approx):
             img = cv2.circle(img, (int(pnt[0][0]), int(pnt[0][1])), 1, (0, 0, 255), 1) 
             pts.append(pnt[0])
-            seg.append([offset + i, offset + (i+1)%len(approx)])
+            seg.append([offset + j, offset + (j+1)%len(approx)])
 
     if len(holes) == 0:
-        holes.append([0,0])
+            holes.append([-1,-1])
+    if len(pts) < 3:
+        vert_list.append([])
+        tri_list.append([])
+        continue
 
     tri_input = dict(vertices=pts, segments=seg, holes=holes)
     tri_output = tr.triangulate(tri_input,'p')
-
+    # tr.compare(plt, tri_input, tri_output)
+    # plt.savefig("test/{:03d}.png".format(i))
+    
     vert_list.append(tri_output["vertices"])
     tri_list.append(tri_output["triangles"])
     

@@ -81,7 +81,7 @@ fn connect_parts() -> (Display, Io)
     
     let pwm = Pwm::new(p.PWM0);
     let buzzer = p0.p0_18.into_push_pull_output(Level::High).degrade();
-    pwm.set_output_pin(Channel::C0, buzzer).set_prescaler(Prescaler::Div32);
+    pwm.set_output_pin(Channel::C0, buzzer).set_prescaler(Prescaler::Div128);
 
     gpiote.port().input_pin(&io_pins.alarm).low();
     gpiote.port().input_pin(&io_pins.btn_up).low();

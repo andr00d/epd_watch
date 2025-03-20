@@ -73,16 +73,29 @@ fn RTC1()
         if let Some(ref mut int_data) = get_intdata!(cs) 
         {
             let note = NOTES_LIST[int_data.curr_note];
-            int_data.curr_note += 1;
-            int_data.pwm.set_period((FREQ_LIST[note.0 as usize] as u32).hz());
+            int_data.rtc1.clear_counter();
+            int_data.rtc1.reset_event(RtcInterrupt::Compare1);
+            
+            if int_data.btwn_notes 
+            { 
+                int_data.pwm.disable(); 
+                int_data.curr_note += 1;
+                int_data.rtc1.set_compare(RtcCompareReg::Compare1, (DELAY_MS as f32*note.1 as f32*0.2) as u32).unwrap();
+                int_data.rtc1.enable_counter();
+                int_data.btwn_notes = !int_data.btwn_notes;
+                return;
+            }
+
+            int_data.pwm.enable();
+            int_data.pwm.set_period((FREQ_LIST[note.0 as usize] as u32).hz()); 
             let max_duty = int_data.pwm.max_duty();
             let (ch0, _, _, _) = int_data.pwm.split_channels();
             ch0.set_duty(max_duty / 2);
 
-            int_data.rtc1.clear_counter();
-            int_data.rtc1.reset_event(RtcInterrupt::Compare1);
-            int_data.rtc1.set_compare(RtcCompareReg::Compare1, DELAY_MS*note.1 as u32).unwrap();
+            int_data.rtc1.set_compare(RtcCompareReg::Compare1, (DELAY_MS as f32*note.1 as f32*0.9) as u32).unwrap();
             int_data.rtc1.enable_counter();
+
+            int_data.btwn_notes = !int_data.btwn_notes;
         }
     });   
 }
@@ -172,6 +185,7 @@ impl Io
             timer2_expired: false,
             pwm: pwm,
             curr_note: 0,
+            btwn_notes: false,
         };
 
         
@@ -458,6 +472,7 @@ impl Io
             {
                 let note = NOTES_LIST[0];
                 int_data.curr_note = 1;
+                int_data.btwn_notes = false;
                 int_data.pwm.enable();
                 int_data.pwm.set_period((FREQ_LIST[note.0 as usize] as u32).hz());
                 let max_duty = int_data.pwm.max_duty();
