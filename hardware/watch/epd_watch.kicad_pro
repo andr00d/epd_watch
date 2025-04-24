@@ -511,12 +511,12 @@
   },
   "pcbnew": {
     "last_paths": {
-      "gencad": "epd_watch.cad",
-      "idf": "",
+      "gencad": "../../../Downloads/epd_watch.cad",
+      "idf": "../../../Downloads/epd_watch.emn",
       "netlist": "",
       "plot": "",
       "pos_files": "",
-      "specctra_dsn": "",
+      "specctra_dsn": "../../../Downloads/epd_watch.dsn",
       "step": "epd_watch.stl",
       "svg": "/home/andr00d/Downloads/",
       "vrml": "../../../Downloads/epd_watch.wrl"
