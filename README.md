@@ -16,12 +16,13 @@ in the 3D_models folder are all the stl files needed to print the cases for both
 
 ## running on the watch
 A few steps are needed to be able to compile and run the code on the watch. running the following commands installs cargo embed and the correct target:  
+```sudo apt install build-essential```
 ```rustup target add thumbv7em-none-eabihf```  
 ```rustup component add llvm-tools```  
 ```cargo install cargo-binutils```  
-```cargo install cargo-embed```
+```curl --proto '=https' --tlsv1.2 -LsSf https://github.com/probe-rs/probe-rs/releases/latest/download/probe-rs-tools-installer.sh | sh```
 
-After this is finished, just place the watch on the charger and run ```cargo embed``` to flash the watch. 
+After this is finished, just place the watch on the charger and run ```cargo embed``` to flash the watch. if it says it cannot find the programmer, the udev rules might be annoying, follow the instructions on [this page](https://probe.rs/docs/getting-started/probe-setup/), and make sure the watch is making good connection with the programmer.
 
 ## running on your pc
 There is a pc_test folder that allows additions to the watch to be tested a bit more easily than having to constantly wait for the watch to be programmed. simply go into the pc_test folder, type ```cargo run``` and you can test if everything is as you expect.

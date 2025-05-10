@@ -15,7 +15,6 @@ impl Display
         let buffer_curr: [u8; BUFFSIZE] = [0xFF; BUFFSIZE];
         let buffer_old: [u8; BUFFSIZE] = [0xff; BUFFSIZE];
 
-        let _power = pins.power.into_push_pull_output(Level::High);
         let busy = pins.busy.into_floating_input();
         let res = pins.res.into_push_pull_output(Level::Low);
         let cs = pins.cs.into_push_pull_output(Level::Low);
@@ -44,7 +43,6 @@ impl Display
         return Display{
             buffer_curr: buffer_curr,
             buffer_old: buffer_old,
-            // power: power,
             spi: spi,
             busy: busy, 
             res: res,
