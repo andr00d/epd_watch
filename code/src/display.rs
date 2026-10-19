@@ -13,7 +13,6 @@ const BUFFSIZE: usize = SIZE*((SIZE+7)/8);
 
 pub struct DispPins
 {
-    pub power: Pin<Disconnected>,
     pub clk: Pin<Disconnected>,
     pub miso: Pin<Disconnected>,
     pub mosi: Pin<Disconnected>,
@@ -27,7 +26,6 @@ pub struct Display
 {
     buffer_curr: [u8; BUFFSIZE],
     buffer_old: [u8; BUFFSIZE],
-    // power: Pin<Output<PushPull>>,
     spi: Spim<nrf52832_hal::pac::SPIM2>,
     busy: Pin<Input<Floating>>,
     res: Pin<Output<PushPull>>,
