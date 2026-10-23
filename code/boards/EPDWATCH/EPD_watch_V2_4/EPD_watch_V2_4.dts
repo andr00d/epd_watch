@@ -1,0 +1,200 @@
+/dts-v1/;
+
+#include <nordic/nrf52832_qfaa.dtsi>
+#include "EPD_watch_V2_4-pinctrl.dtsi"
+
+/ {
+	model = "E-ink watch V2.4";
+	compatible = "EPDWATCH,EPD-watch-V2-4";
+
+	chosen
+	{
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	leds
+	{
+		compatible = "gpio-leds";
+
+		buzzer: buzzer
+		{
+			gpios = <&gpio0 16 (GPIO_PUSH_PULL & GPIO_ACTIVE_HIGH)>;
+			label = "Buzzer";
+		};
+
+		batt_lvl_en: batt_lvl_en
+		{
+			gpios = <&gpio0 24 (GPIO_PUSH_PULL & GPIO_ACTIVE_HIGH)>;
+			label = "Enable battery level measurement";
+		};
+
+		disp_rst: disp_rst
+		{
+			gpios = <&gpio0 26 (GPIO_PUSH_PULL & GPIO_ACTIVE_HIGH)>;
+			label = "reset EPD display";
+		};
+
+		disp_dc: disp_dc
+		{
+			gpios = <&gpio0 27 (GPIO_PUSH_PULL & GPIO_ACTIVE_HIGH)>;
+			label = "EPD data/command";
+		};
+
+
+		disp_cs: disp_cs
+		{
+			gpios = <&gpio0 28 (GPIO_PUSH_PULL & GPIO_ACTIVE_HIGH)>;
+			label = "EPD chip select";
+		};
+	};
+
+    buttons
+	{
+        compatible = "gpio-keys";
+
+        btn_up: btn_up
+		{
+            gpios = <&gpio0 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Top side Button";
+        };
+
+        btn_mid: btn_mid
+		{
+            gpios = <&gpio0 6 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Middle side Button";
+        };
+
+        btn_dwn: btn_dwn
+		{
+            gpios = <&gpio0 7 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Bottom side Button";
+        };
+
+
+
+        rtc_int: rtc_int
+		{
+            gpios = <&gpio0 8 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "RTC clock interrupt";
+        };
+
+        chrg_complete: chrg_complete
+		{
+            gpios = <&gpio0 14 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Charge completion indicator";
+        };
+
+        chrg_active: chrg_active
+		{
+            gpios = <&gpio0 15 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Charge completion indicator";
+        };
+
+
+
+        disp_busy: disp_busy
+		{
+            gpios = <&gpio0 25 (GPIO_ACTIVE_HIGH)>;
+            label = "EPD busy signal";
+        };
+    };
+};
+
+
+&pinctrl
+{
+    spi_default: spi_default
+    {
+        group1
+        {
+            psels = <NRF_PSEL(SPIM_SCK,  0, 29)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 30)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 22)>;
+        };
+    };
+
+    spi_sleep: spi_sleep
+    {
+        group1
+        {
+            psels = <NRF_PSEL(SPIM_SCK,  0, 29)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 30)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 22)>;
+            low-power-enable;
+        };
+    };
+
+	i2c0_default: i2c0_default
+	{
+		group1
+		{
+			psels = <NRF_PSEL(TWIM_SDA, 0, 11)>,
+					<NRF_PSEL(TWIM_SCL, 0, 12)>;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep
+	{
+		group1
+		{
+			psels = <NRF_PSEL(TWIM_SDA, 0, 11)>,
+					<NRF_PSEL(TWIM_SCL, 0, 12)>;
+			low-power-enable;
+		};
+	};
+};
+
+&timer4
+{
+	status = "okay";
+};
+
+&adc
+{
+	compatible = "nordic,nrf-saadct";
+	status = "okay";
+	timer-instance = <&timer4>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+};
+
+&flash0
+{
+	partitions
+	{
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		boot_partition: partition@0
+		{
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x0 DT_SIZE_K(48)>;
+		};
+
+		slot0_partition: partition@c000
+		{
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0xc000 DT_SIZE_K(220)>;
+		};
+
+		slot1_partition: partition@43000
+		{
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x43000 DT_SIZE_K(220)>;
+		};
+
+		storage_partition: partition@7a000
+		{
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x7a000 DT_SIZE_K(24)>;
+		};
+	};
+};
+

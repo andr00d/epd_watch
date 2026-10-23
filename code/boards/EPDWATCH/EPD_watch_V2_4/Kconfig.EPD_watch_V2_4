@@ -1,0 +1,2 @@
+config BOARD_EPD_WATCH_V2_4
+	select SOC_NRF52832_QFAA

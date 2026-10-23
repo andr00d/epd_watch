@@ -1,0 +1,6 @@
+board:
+  name: EPD_watch_V2_4
+  full_name: EPD_watch_V2_4
+  vendor: EPDWATCH
+  socs:
+    - name: nrf52832
