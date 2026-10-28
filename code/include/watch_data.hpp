@@ -1,6 +1,9 @@
 #ifndef _WATCH_DATA_HPP_
 #define _WATCH_DATA_HPP_
 
+#include <time.h>
+
+
 enum AlarmMode 
 {
     Off,
@@ -16,18 +19,9 @@ enum StateStopWatch
     Stopped,
 };
 
-struct SimpleDateTime
-{
-    uint16_t year,
-    uint8_t month,
-    uint8_t day,
-    uint8_t hour,
-    uint8_t minute,
-}
-
 struct 
 {
-    SimpleDateTime time,
+    tm start,
 
     // alarm data
     bool dateset_alarm,
@@ -38,11 +32,13 @@ struct
 
     // stopwatch data
     StopwatchState stopwatch_state,
-    SimpleDateTime stopwatch_starttime,
-    int values[];
+    tm stopwatch_starttime,
+    tm laps[4],
+    uint8_t lap_index,
 
-
-
+    // battery data
+    uint8_t batt_level,
+    bool is_charging,
 } WatchData;
 
 #endif
