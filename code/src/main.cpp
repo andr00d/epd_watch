@@ -10,6 +10,7 @@ int main(void)
 {
     LOG_INF("Watch turned on");
     Display disp;
+
     if (!disp.bootup_check()) {return -1;}
 
     while(true)
@@ -17,6 +18,7 @@ int main(void)
         k_msleep(1000);
         LOG_INF("Watch loop");
         disp.prep_clean_update();
+        disp.get_frame_buff()->draw_text("TE:ST", 100, 75, 10, AnchorCenter);
         disp.wake();
         disp.update();
         disp.sleep();

@@ -9,8 +9,7 @@ target_include_directories(app PRIVATE include)
 target_sources(app PRIVATE 
         src/main.cpp
         src/display.cpp
-        src/display_font.cpp
-        src/display_shapes.cpp
+        src/frame_buffer.cpp
         src/io.cpp
         src/pages.cpp
 )

@@ -4,7 +4,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
-#include <utility>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(disp);
@@ -17,17 +16,9 @@ static const struct gpio_dt_spec pin_disp_dc = GPIO_DT_SPEC_GET(DT_NODELABEL(dis
 static const struct gpio_dt_spec pin_disp_cs = GPIO_DT_SPEC_GET(DT_NODELABEL(disp_cs), gpios);
 static const struct gpio_dt_spec pin_disp_busy = GPIO_DT_SPEC_GET(DT_NODELABEL(disp_busy), gpios);
 
-uint8_t Display::buffer_a[BUFFSIZE];
-uint8_t Display::buffer_b[BUFFSIZE];
-uint8_t* Display::buffer_curr = Display::buffer_a;
-uint8_t* Display::buffer_old = Display::buffer_b;
 
-Display::Display()//: spi_dev(dev)
+Display::Display() : buff(FrameBuffer())
 {
-
-    memset(buffer_curr, 0xFF, BUFFSIZE);
-    memset(buffer_old, 0xFF, BUFFSIZE);
-
     sleeping = true;
     clean_update = true;
 }
@@ -45,7 +36,7 @@ bool Display::bootup_check()
 	bool ret_cs = gpio_is_ready_dt(&pin_disp_cs);
 	bool ret_busy = gpio_is_ready_dt(&pin_disp_busy);
 
-    if(!ret_rst || !ret_dc || !ret_cs || !ret_busy)
+    if (!ret_rst || !ret_dc || !ret_cs || !ret_busy)
     {
         LOG_ERR("Display IO pins not ready! (rst=%i, dc=%i, cs=%i, busy=%i)",
                                         ret_rst, ret_dc, ret_cs, ret_busy);
@@ -57,7 +48,7 @@ bool Display::bootup_check()
     int err_cs = gpio_pin_configure_dt(&pin_disp_cs, GPIO_OUTPUT_INACTIVE);
     int err_busy = gpio_pin_configure_dt(&pin_disp_busy, GPIO_INPUT);
 
-    if(err_rst != 0 || err_dc != 0 || err_cs != 0 || err_busy != 0)
+    if (err_rst != 0 || err_dc != 0 || err_cs != 0 || err_busy != 0)
     {
         LOG_ERR("Unable to configure display IO pins! (rst=%i, dc=%i, cs=%i, busy=%i)",
                                         err_rst, err_dc, err_cs, err_busy);
@@ -81,7 +72,7 @@ bool Display::wake()
         k_msleep(10);
 
         send_cmd(PANEL_SETTING);
-        if(clean_update) {send_data_byte(0xdf);}
+        if (clean_update) {send_data_byte(0xdf);}
         else {send_data_byte(0xff);}
         
         send_data_byte(0x0e);
@@ -106,7 +97,7 @@ bool Display::wake()
         send_cmd(POWER_SAVING);
         send_data_byte(0x00);
 
-        if(!clean_update)
+        if (!clean_update)
         {
             send_cmd(LUT_VCOM);
             send_data_buffer(LUT_ARR_DC, 56);
@@ -119,14 +110,11 @@ bool Display::wake()
             send_cmd(LUT_BB);
             send_data_buffer(LUT_ARR_BB, 56);
         }
-        else 
-        {
-            clean_update = false;
-        }
         
         send_cmd(POWER_ON);
         init_finished = wait_busy();
         if (!init_finished) {continue;}
+        if (clean_update) {clean_update = false;}
         sleeping = false;
     }
 
@@ -147,10 +135,12 @@ void Display::sleep()
 bool Display::update()
 {
     bool is_updated = false;
+    uint8_t* buffer_curr = buff.get_buff_curr();
+    uint8_t* buffer_old = buff.get_buff_old();
 
     while(!is_updated)
     {
-        if(sleeping) {wake();}
+        if (sleeping) {wake();}
 
         if (!send_cmd(DATA_TRANSMISSION_2) ||
             !send_data_buffer(buffer_old, BUFFSIZE))
@@ -176,8 +166,7 @@ bool Display::update()
             continue;
         }
 
-        std::swap(buffer_curr, buffer_old);
-        memset(buffer_curr, 0x0, BUFFSIZE);
+        buff.rotate_buffers();
         return true;
     }
 
@@ -187,6 +176,11 @@ bool Display::update()
 void Display::prep_clean_update()
 {
     clean_update = true;
+}
+
+FrameBuffer* Display::get_frame_buff()
+{
+    return &buff;
 }
 
 /////////////////////////////////////////////////
@@ -201,7 +195,7 @@ bool Display::wait_busy()
         k_msleep(25);
         loop_cnt++;
 
-        if(loop_cnt > MAX_LOOPS) {return false;}
+        if (loop_cnt > MAX_LOOPS) {return false;}
     }
 
     return true;
